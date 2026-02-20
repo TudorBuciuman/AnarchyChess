@@ -13,14 +13,12 @@ public class Chessman : MonoBehaviour
     public LegalMovesManager LegalMovesManager;
     public GameObject controller;
     public GameObject movePlate;
-    public string player;
+    public string player="black";
     public string currentPlayer = "white";
     public static string MyTurn=null;
     public GameObject DMPawn;
     public int xBoard = -1;
     public int yBoard = -1;
-    public Sprite black_king, black_queen, black_bishop, black_knight, black_rook, black_pawn;
-    public Sprite white_king, white_queen, white_bishop, white_knight, white_rook, white_pawn;
     public GameObject Piece;
     public GameObject Rook;
     public bool wCastling = true;
@@ -41,61 +39,36 @@ public class Chessman : MonoBehaviour
         SetCoords();
         switch (this.name)
         {
-            case "black_king": this.GetComponent<SpriteRenderer>().sprite = black_king; player = "black"; break;
-            case "black_queen": this.GetComponent<SpriteRenderer>().sprite = black_queen; player = "black"; break;
-            case "black_knight": this.GetComponent<SpriteRenderer>().sprite = black_knight; player = "black"; break;
-            case "black_rook": this.GetComponent<SpriteRenderer>().sprite = black_rook; player = "black"; break;
-            case "black_pawn": this.GetComponent<SpriteRenderer>().sprite = black_pawn; player = "black"; break;
-            case "black_bishop": this.GetComponent<SpriteRenderer>().sprite = black_bishop; player = "black"; break;
+            case "black_king": player = "black"; break;
+            case "black_queen": player = "black"; break;
+            case "black_knight": player = "black"; break;
+            case "black_rook": player = "black"; break;
+            case "black_pawn": player = "black"; break;
+            case "black_bishop": player = "black"; break;
 
-            case "white_king": this.GetComponent<SpriteRenderer>().sprite = white_king; player = "white"; break;
-            case "white_queen": this.GetComponent<SpriteRenderer>().sprite = white_queen; player = "white"; break;
-            case "white_knight": this.GetComponent<SpriteRenderer>().sprite = white_knight; player = "white"; break;
-            case "white_rook": this.GetComponent<SpriteRenderer>().sprite = white_rook; player = "white"; break;
-            case "white_pawn": this.GetComponent<SpriteRenderer>().sprite = white_pawn; player = "white"; break;
-            case "white_bishop": this.GetComponent<SpriteRenderer>().sprite = white_bishop; player = "white"; break;
-
+            case "white_king": player = "white"; break;
+            case "white_queen": player = "white"; break;
+            case "white_knight": player = "white"; break;
+            case "white_rook": player = "white"; break;
+            case "white_pawn": player = "white"; break;
+            case "white_bishop": player = "white"; break;
         }
     }
     public void SetCoords()
     {
-        float boardSize = (2048f * Game.multiplier) / 100f; 
+        int r = 1;
+
+        if (!white)
+            r = -1;
+        float boardSize = (2048f * multiplier) / 100f; 
         float squareSize = boardSize / 8f;      
         float halfBoard = (boardSize / 2f) - (squareSize / 2f);
 
         float x = (xBoard * squareSize) - halfBoard;
         float y = (yBoard * squareSize) - halfBoard;
 
-        this.transform.position = new Vector3(x, y, 80f);
+        this.transform.position = new Vector3(x*r, y*r, 80f);
     }
-
-    /// <summary>
-    /// Pawn = 1,
-    /// Knight = 2,
-    /// Bishop = 3,
-    /// Rook = 4,
-    /// Queen = 5,
-    /// King = 6,
-    /// </summary>
-    public enum Pieces : byte
-    {
-        None = 0,
-
-        Pawn = 1,
-        Knight = 2,
-        Bishop = 3,
-        Rook = 4,
-        Queen = 5,
-        King = 6,
-
-        bPawn = 7,
-        bKnight = 8,
-        bBishop = 9,
-        bRook = 10,
-        bQueen = 11,
-        bKing = 12,
-    }
-
     public int GetXBoard()
     {
         return xBoard;
@@ -114,7 +87,6 @@ public class Chessman : MonoBehaviour
     public void SetYBoard(int y)
     {
         yBoard = y;
-
     }
 
    
@@ -126,7 +98,7 @@ public class Chessman : MonoBehaviour
         {
             if (this.gameObject.name == "tabla_sah")
                 DestroyMovePlates();
-            else if (!controller.GetComponent<Game>().IsGameOver() && controller.GetComponent<Game>().GetCurrentPlayer() == player )
+            else if (!controller.GetComponent<Game>().IsGameOver() && white ==(player=="white") && controller.GetComponent<Game>().GetCurrentPlayer() == player)
             {
                 DestroyMovePlates();
                 InitatiateMovePlates();
@@ -224,7 +196,6 @@ public class Chessman : MonoBehaviour
     }
     public void SurroundMovePlate()
     {
-        Game gm = controller.GetComponent<Game>();
         PointMovePlate(xBoard, yBoard -1, xBoard, yBoard);
         PointMovePlate(xBoard , yBoard + 1, xBoard, yBoard);
         PointMovePlate(xBoard + 1, yBoard - 1, xBoard, yBoard);
@@ -233,7 +204,6 @@ public class Chessman : MonoBehaviour
         PointMovePlate(xBoard - 1, yBoard -1, xBoard, yBoard);
         PointMovePlate(xBoard - 1, yBoard  , xBoard, yBoard);
         PointMovePlate(xBoard - 1, yBoard + 1, xBoard, yBoard);
-
     }
 
     public void PointMovePlate(int x, int y, int a, int b)
@@ -326,7 +296,6 @@ public class Chessman : MonoBehaviour
         Game game = controller.GetComponent<Game>();
         bool y=game.EnPassant;
         Game.Move a = game.GetTheLastMove();
-
         if (a != null)
         {
             if (a.piece.name != "black_pawn" && a.piece.name != "white_pawn")
@@ -369,12 +338,12 @@ public class Chessman : MonoBehaviour
         Game game = controller.GetComponent<Game>();
         if (gameObject.name == "white_pawn")
         {
-            gameObject.GetComponent<SpriteRenderer>().sprite = white_queen;
             for (int i = 0; i < controller.GetComponent<Game>().playerWhite.Length; i++)
             {
                 if (controller.GetComponent<Game>().playerWhite[i] == obj)
                 {
                     controller.GetComponent<Game>().playerWhite[i].name = "white_queen";
+                    controller.GetComponent<Game>().ReturnQueenSprite(gameObject);
                     break;
                 }
             }
@@ -382,12 +351,12 @@ public class Chessman : MonoBehaviour
         }
         else
         {
-            gameObject.GetComponent<SpriteRenderer>().sprite = black_queen;
             for (int i = 0; i < controller.GetComponent<Game>().playerBlack.Length; i++)
             {
                 if (controller.GetComponent<Game>().playerBlack[i] == obj)
                 {
                     controller.GetComponent<Game>().playerBlack[i].name = "black_queen";
+                    controller.GetComponent<Game>().ReturnQueenSprite(gameObject);
                     break;
                 }
             }
@@ -396,18 +365,20 @@ public class Chessman : MonoBehaviour
     }
     public void EnPassant(int matrixX, int matrixY,int X, int Y)
     {
-        float boardSize = (2048f * Game.multiplier) / 100f; 
+        float boardSize = (2048f * multiplier) / 100f; 
         float squareSize = boardSize / 8f;       
         float halfBoard = (boardSize / 2f) - (squareSize / 2f); 
 
         float x = (matrixX * squareSize) - halfBoard;
         float y = (matrixY * squareSize) - halfBoard;
-
-        GameObject mp = Instantiate(movePlate, new Vector3(x, y, 80), Quaternion.identity);
-        mp.transform.localScale = new Vector2(mp.transform.localScale.x * Game.multiplier / 2.4f, mp.transform.localScale.y * Game.multiplier / 2.4f);
+        int r = 1;
+        if (!white)
+            r = -1;
+        GameObject mp = Instantiate(movePlate, new Vector3(x*r, y*r, 80), Quaternion.identity);
+        mp.transform.localScale = new Vector2(mp.transform.localScale.x * multiplier / 2.4f, mp.transform.localScale.y * multiplier / 2.4f);
         MoveThePlate mpScript = mp.GetComponent<MoveThePlate>();
         Game game = controller.GetComponent<Game>();
-        Game.Move a = game.GetTheLastMove();
+        Move a = game.GetTheLastMove();
         mpScript.DMPawn = a.piece;
         mpScript.PwnTQn = false;
         mpScript.piece = Piece;
@@ -466,7 +437,6 @@ public class Chessman : MonoBehaviour
                 TXR = 3;
                 TYR = 0;
                 MovePlateSpawn(2, 0, 4, 0);
-
             }
             if (gm.GetComponent<Game>().wkCastling && gm.GetPosition(6, 0) == null && gm.GetPosition(5, 0) == null)
             {
@@ -490,15 +460,18 @@ public class Chessman : MonoBehaviour
         if (LegalMovesManager.IsLegal(Piece, i, j, matrixX,matrixY))
         {
 
-            float boardSize = (2048f * Game.multiplier) / 100f;
+            float boardSize = (2048f * multiplier) / 100f;
             float squareSize = boardSize / 8f;
             float halfBoard = (boardSize / 2f) - (squareSize / 2f);
-
+            int r = 1;
+            if (!white)
+                r = -1;
             float x = (matrixX * squareSize) - halfBoard;
             float y = (matrixY * squareSize) - halfBoard;
 
-            GameObject mp = Instantiate(movePlate, new Vector3(x, y, 80), Quaternion.identity);
-            mp.transform.localScale = new Vector2(mp.transform.localScale.x * Game.multiplier / 2.4f, mp.transform.localScale.y * Game.multiplier / 2.4f);
+            GameObject mp = Instantiate(movePlate, new Vector3(x * r, y * r, 80), Quaternion.identity);
+            mp.GetComponent<SpriteRenderer>().color = ToColorTransparent(matchTheme, 204);
+            mp.transform.localScale = new Vector2(mp.transform.localScale.x * multiplier / 2.4f, mp.transform.localScale.y * multiplier / 2.4f);
             MoveThePlate mpScript = mp.GetComponent<MoveThePlate>();
             mpScript.attack = false;
             mpScript.piece = Piece;
@@ -528,7 +501,6 @@ public class Chessman : MonoBehaviour
             mpScript.SetCoords(matrixX, matrixY);
             castling = false;
         }
-       
     }
 
     public void MovePlateAttackSpawn(GameObject Piece, int matrixX, int matrixY, int i, int j)
@@ -536,17 +508,18 @@ public class Chessman : MonoBehaviour
         LegalMovesManager = controller.GetComponent<LegalMovesManager>();
         if (LegalMovesManager.IsLegal(Piece, i, j, matrixX, matrixY))
         {
-
-            float boardSize = (2048f * Game.multiplier) / 100f;
+            float boardSize = (2048f * multiplier) / 100f;
             float squareSize = boardSize / 8f;
             float halfBoard = (boardSize / 2f) - (squareSize / 2f);
-
+            int r = 1;
+            if (!white)
+                r = -1;
             float x = (matrixX * squareSize) - halfBoard;
             float y = (matrixY * squareSize) - halfBoard;
 
-            GameObject mp = Instantiate(movePlate, new Vector3(x, y, 79), Quaternion.identity);
-            
-            mp.transform.localScale = new Vector2(mp.transform.localScale.x * Game.multiplier / 2.4f, mp.transform.localScale.y * Game.multiplier / 2.4f);
+            GameObject mp = Instantiate(movePlate, new Vector3(x * r, y * r, 79), Quaternion.identity);
+            mp.GetComponent<SpriteRenderer>().color = ToColorTransparent(matchTheme, 204);
+            mp.transform.localScale = new Vector2(mp.transform.localScale.x * multiplier / 2.4f, mp.transform.localScale.y * multiplier / 2.4f);
             MoveThePlate mpScript = mp.GetComponent<MoveThePlate>();
             mpScript.attack = true;
             mpScript.piece = Piece;
@@ -566,9 +539,6 @@ public class Chessman : MonoBehaviour
             mpScript.SetCoords(matrixX, matrixY);
             mpScript.IX = i;
             mpScript.IY = j;
-         
         }
-       
-
     }
 }

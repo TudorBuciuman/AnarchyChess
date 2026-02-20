@@ -1,0 +1,26 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9c36b6893f462014789b8c542ef11b0e, type: 3}
+  m_Name: neo-wood
+  m_EditorClassIdentifier: 
+  white_pawn: {fileID: 21300000, guid: 5f9ba4ca5147c1f4fa4a93bc7034c7f1, type: 3}
+  white_knight: {fileID: 21300000, guid: f39b45a0e23b2514082aee7db5d30e9a, type: 3}
+  white_bishop: {fileID: 21300000, guid: 8ede6ec6441ac3c4a98e86e8f4b243aa, type: 3}
+  white_rook: {fileID: 21300000, guid: 657df6d4bcb9a9f4ba7128d39cc4db90, type: 3}
+  white_queen: {fileID: 21300000, guid: cf23dcbdbbf509142ba2d081c5430c2f, type: 3}
+  white_king: {fileID: 21300000, guid: 9706c920fd37d914f814d4cc41ba7669, type: 3}
+  black_pawn: {fileID: 21300000, guid: 98247814959806c4b86e4b384ba0ecb9, type: 3}
+  black_knight: {fileID: 21300000, guid: 88c01f1e35da0234da76a8b5c5221af3, type: 3}
+  black_bishop: {fileID: 21300000, guid: fb6c2d6a9868cf1418fbeb40e2c8be60, type: 3}
+  black_rook: {fileID: 21300000, guid: 84be9e03cfcf56b498efa6496c8b5c9a, type: 3}
+  black_queen: {fileID: 21300000, guid: dc88d828e56fdc041b165fc320ea74b7, type: 3}
+  black_king: {fileID: 21300000, guid: c93c34c3674212349a3a937144740697, type: 3}

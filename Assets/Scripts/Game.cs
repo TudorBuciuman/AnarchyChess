@@ -1,19 +1,24 @@
 using System.Collections.Generic;
 using UnityEngine;
-using System;
 using UnityEngine.UI;
 using System.Collections;
 using UnityEngine.SceneManagement;
+using System;
 public class Game : MonoBehaviour
 {
+    [SerializeField]
+    public PieceSetDefinition[] pieceSets = new PieceSetDefinition[3];
+    public int PieceSet = -1;
+
     public GameObject chesspiece;
     public Chessman csman;
     public string MyTurn = "a";
     public GameObject EPassant = null;
     public GameObject[,] positions = new GameObject[8, 8];
-    public GameObject[] playerBlack = new GameObject[16];
-    public GameObject[] playerWhite = new GameObject[16];
+    public GameObject[] playerBlack = new GameObject[20];
+    public GameObject[] playerWhite = new GameObject[20];
     public string currentPlayer = "white";
+    public static bool white = true;
     public bool gameOver = false;
     public string winner;
     public int FullMoves = 0;
@@ -41,89 +46,424 @@ public class Game : MonoBehaviour
     public Text YouWonText;
     public Image dark;
 
+    public Sprite[] tableSprites = new Sprite[10];
+    public Color c;
+    public static Colors matchTheme=Colors.wood1;
+
+
     string fen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
 
     public static float multiplier = 2.4f;
-
-    /*
-    public void MuliplayerThings()
-    {
-        if (CompareTag("GameController"))
-        {
-            GameObject controller = GameObject.FindGameObjectWithTag("tag2");
-            MyName.text = PlayerPrefs.GetString("username");
-            OppName.text = controller.GetComponent<MultiplayerManager>().OppName;
-            gameObject.GetComponent<Game>().MyTimeT.gameObject.SetActive(true);
-            gameObject.GetComponent<Game>().OppName.gameObject.SetActive(true);
-            gameObject.GetComponent<Game>().MyName.gameObject.SetActive(true);
-            gameObject.GetComponent<Game>().OppTimeT.gameObject.SetActive(true);
-           StartCoroutine(ClockCoroutine());
-        }
-    }
-    public IEnumerator ClockCoroutine()
-    {
-        GameObject controller = GameObject.FindGameObjectWithTag("tag2");
-        MyTimeT.text = FormatTime(MyTime);
-        OppTimeT.text = FormatTime(OppTime);
-        MyTurn =controller.GetComponent<MultiplayerManager>().MyTurn;
-        while (!IsGameOver())
-        {
-            yield return new WaitForSeconds(1f);
-            if (MyTurn == currentPlayer)
-            {
-                MyTime -= 1f;
-                MyTimeT.text = FormatTime(MyTime);
-            }
-            else
-            {
-                OppTime -= 1f;
-                OppTimeT.text = FormatTime(OppTime);
-            }
-            if (MyTime <= 0)
-            {
-                gameOver = true;
-
-                WinnerText(controller.GetComponent<MultiplayerManager>().OppName);
-                break;
-            }
-            else if (OppTime <= 0)
-            {
-                gameOver = true;
-                WinnerText(controller.GetComponent<MultiplayerManager>().MyName);
-                break;
-            }
-        }
-    }
-    */
     public void Awake()
     {
 #if UNITY_STANDALONE_WIN
         multiplier = 4.5f;
-        //FindFirstObjectByType<Camera>().backgroundColor = Color.black;
 #endif
-
+        c = GameObject.Find("tabla_sah").GetComponent<SpriteRenderer>().color;
         QualitySettings.vSyncCount = 1;
         Application.targetFrameRate =60;
-        if (tag=="GameController")
+        if (CompareTag("GameController"))
             StartTheGame();
     }
     public void StartTheGame()
     {
-        GameObject.Find("tabla_sah").transform.localScale = new Vector2(multiplier, multiplier);
-
+        white = UnityEngine.Random.Range(0, 2) == 1;
+        PieceSetManager();
+        Theme();
         LoadThePositionFromFen(fen);
-
-
-        for (int i = 0; i < 16 && playerBlack[i] != null; i++)
+        //Chess960();
+        
+        for (int i = 0; i < 16; i++)
         {
+            if(playerBlack[i])
             SetPosition(playerBlack[i]);
         }
-        for (int i = 0; i < 16 && playerWhite[i] != null; i++)
+        for (int i = 0; i < 16; i++)
         {
+            if (playerWhite[i])
             SetPosition(playerWhite[i]);
         }
+        if (!white)
+        {
+            GameObject.FindGameObjectWithTag("GameController").GetComponent<ChessBot>().BotTurn();
+        }
     }
-    
+    public void Update()
+    {
+        if (Input.GetKeyUp(KeyCode.K))
+            Theme();
+        if (Input.GetKeyUp(KeyCode.L))
+            RebuildPieces();
+    }
+    public enum Colors
+    {
+        normal,
+        dark,
+        white,
+        bright,
+        darkbrown,
+        brightwood,
+        anarchy,
+        gray,
+        blue,
+        JIK,
+        wood1,
+        wood2,
+        valentines,
+        olive,
+        metal,
+        /*horsey,
+        dublin,
+        fascism,
+        lichess_anarchy,
+        turbografx,
+        war,
+        darkfantasy,*/
+
+    }
+
+    public static Color ToColor(Colors c)
+    {
+        switch (c)
+        {
+            case Colors.normal:
+                return new Color32(0x44, 0x14, 0x02, 255); 
+
+            case Colors.dark:
+                return new Color32(0x10, 0x14, 0x19, 255);
+
+            case Colors.white:
+                return new Color32(0xF5, 0xEB, 0xE0, 255);
+
+            case Colors.bright:
+                return new Color32(0xE7, 0xD0, 0x9E, 255); 
+
+            case Colors.darkbrown:
+                return new Color32(0x25, 0x16, 0x05, 255); 
+
+            case Colors.brightwood:
+                return new Color32(0xD4, 0xAA, 0x7D, 255); 
+
+            case Colors.gray:
+                return new Color32(0x1C, 0x1C, 0x21, 255); 
+
+            case Colors.blue:
+                return new Color32(0x22, 0x80, 0xBF, 255); 
+
+            case Colors.JIK:
+                return new Color32(0x23, 0x2E, 0xD1, 255);
+
+            case Colors.valentines:
+                return new Color32(0xFF, 0x9C, 0xE4, 255);
+
+            case Colors.olive:
+                return new Color32(0xC0, 0xC1, 0x8F, 255);
+
+            case Colors.metal:
+                return Color.gray;
+
+            case Colors.wood2:
+                return new Color32(0x44, 0x24, 0x00, 255);
+
+            default:
+                return new Color32(0x49, 0x00, 0x00, 255);
+        }
+    }
+    public static Color ToColorTransparent(Colors c, byte t)
+    {
+        switch (c)
+        {
+            case Colors.normal:
+                return new Color32(0x78, 0x47, 0x1A, t);
+
+            case Colors.dark:
+                return new Color32(0x10, 0x14, 0x19, t);
+
+            case Colors.white:
+                return new Color32(0x80, 0x80, 0x80, t);
+
+            case Colors.bright:
+                return new Color32(0xE7, 0xD0, 0x9E, t);
+
+            case Colors.darkbrown:
+                return new Color32(0x25, 0x16, 0x05, t);
+
+            case Colors.brightwood:
+                return new Color32(0xD4, 0xAA, 0x7D, t);
+
+            case Colors.gray:
+                return new Color32(0x1C, 0x1C, 0x21, t);
+
+            case Colors.blue:
+                return new Color32(0x22, 0x80, 0xBF, t);
+
+            case Colors.JIK:
+                return new Color32(0x23, 0x2E, 0xD1, t);
+
+            default:
+                return new Color32(0x78, 0x47, 0x1A, t);
+        }
+    }
+    public static Color ToColorTransparentLM(Colors c, byte t)
+    {
+        switch (c)
+        {
+            case Colors.normal:
+                return new Color(0.8f, 0.6f, 0.3f, 1.0f);
+
+            case Colors.dark:
+                return new Color32(0x12, 0x14, 0x19, t);
+
+            case Colors.white:
+                return new Color32(0x66, 0x66, 0x66, t);
+
+            case Colors.bright:
+                return new Color32(0xE9, 0xD0, 0x9E, t);
+
+            case Colors.darkbrown:
+                return new Color32(0x45, 0x16, 0x05, t);
+
+            case Colors.brightwood:
+                return new Color32(0xD4, 0xAA, 0x7D, t);
+
+            case Colors.gray:
+                return new Color32(0x1C, 0x1C, 0x21, t);
+
+            case Colors.blue:
+                return new Color32(0x22, 0x80, 0xBF, t);
+
+            case Colors.JIK:
+                return new Color32(0x23, 0x2E, 0xD1, t);
+
+            default:
+                return new Color(0.8f, 0.6f, 0.3f, 1.0f);
+        }
+    }
+    public static Color ToColorTransparentCM(Colors c, byte t)
+    {
+        switch (c)
+        {
+            case Colors.normal:
+                return new Color(0.3f, 0.3f, 0.3f, 1.0f);
+
+            case Colors.dark:
+                return new Color32(0x12, 0x14, 0x19, t);
+
+            case Colors.white:
+                return new Color32(0x66, 0x66, 0x66, t);
+
+            case Colors.bright:
+                return new Color32(0xE9, 0xD0, 0x9E, t);
+
+            case Colors.darkbrown:
+                return new Color32(0x45, 0x16, 0x05, t);
+
+            case Colors.brightwood:
+                return new Color32(0xD4, 0xAA, 0x7D, t);
+
+            case Colors.gray:
+                return new Color32(0x1C, 0x1C, 0x21, t);
+
+            case Colors.blue:
+                return new Color32(0x22, 0x80, 0xBF, t);
+
+            case Colors.JIK:
+                return new Color32(0x23, 0x2E, 0xD1, t);
+
+            default:
+                return new Color(0.3f, 0.3f, 0.3f, 1.0f);
+        }
+    }
+    public void PieceSetManager()
+    {
+        int y = UnityEngine.Random.Range(0, pieceSets.Length);
+        while (y == PieceSet)
+            y = UnityEngine.Random.Range(0, pieceSets.Length);
+        PieceSet = y;
+    }
+    public void RebuildPieces()
+    {
+        PieceSetManager();
+        GameObject[] objects = GameObject.FindGameObjectsWithTag("Player");
+        foreach (var item in objects)
+        {
+            PieceSpriteLoader(item);
+        }
+    }
+    public Colors GetTheColor()
+    {
+        Colors[] values = (Colors[])Enum.GetValues(typeof(Colors));
+        Colors randomColor = values[UnityEngine.Random.Range(0, values.Length)];
+        while (randomColor == matchTheme)
+            randomColor = values[UnityEngine.Random.Range(0, values.Length)];
+        if (randomColor == Colors.white && (DateTime.Now.Hour >= 17 || DateTime.Now.Hour <= 8))
+            randomColor = GetTheColor();
+        return randomColor;
+    }
+    public void Theme()
+    {
+        GameObject table = GameObject.Find("tabla_sah");
+        table.transform.localScale = new Vector2(multiplier, multiplier);
+        Colors randomColor = GetTheColor();
+        //PieceSetManager();
+        matchTheme = randomColor;
+        //Debug.Log(randomColor);
+        GameObject.FindFirstObjectByType<Camera>().backgroundColor = ToColor(randomColor);
+        switch (randomColor)
+        {
+            case Colors.anarchy:
+                {
+                    table.GetComponent<SpriteRenderer>().sprite = tableSprites[1];
+                    table.GetComponent<SpriteRenderer>().color = Color.white;
+                    break;
+                }
+            case Colors.JIK:
+                {
+                    table.GetComponent<SpriteRenderer>().sprite = tableSprites[2];
+                    table.GetComponent<SpriteRenderer>().color = Color.white;
+                    break;
+                }
+            case Colors.brightwood:
+                {
+                    table.GetComponent<SpriteRenderer>().sprite = tableSprites[0];
+                    table.GetComponent<SpriteRenderer>().color = Color.white;
+                    break;
+                }
+            case Colors.darkbrown:
+                {
+                    table.GetComponent<SpriteRenderer>().sprite = tableSprites[3];
+                    table.GetComponent<SpriteRenderer>().color = Color.white;
+                    break;
+                }
+            case Colors.bright:
+                {
+                    table.GetComponent<SpriteRenderer>().sprite = tableSprites[0];
+                    table.GetComponent<SpriteRenderer>().color = Color.white;
+                    break;
+                }
+            case Colors.white:
+                {
+                    table.GetComponent<SpriteRenderer>().sprite = tableSprites[UnityEngine.Random.Range(0,3)];
+                    table.GetComponent<SpriteRenderer>().color = Color.white;
+                    break;
+                }
+            case Colors.blue:
+                {
+                    table.GetComponent<SpriteRenderer>().sprite = tableSprites[2];
+                    table.GetComponent<SpriteRenderer>().color = Color.white;
+                    break;
+                }
+            case Colors.gray:
+                {
+                    table.GetComponent<SpriteRenderer>().sprite = tableSprites[0];
+                    table.GetComponent<SpriteRenderer>().color = Color.gray;
+                    break;
+                }
+            case Colors.dark:
+                {
+                    table.GetComponent<SpriteRenderer>().sprite = tableSprites[0];
+                    table.GetComponent<SpriteRenderer>().color = Color.gray;
+                    break;
+                }
+            case Colors.valentines:
+                {
+                    table.GetComponent<SpriteRenderer>().sprite = tableSprites[4];
+                    table.GetComponent<SpriteRenderer>().color = Color.white;
+                    break;
+                }
+
+            case Colors.metal:
+                {
+                    table.GetComponent<SpriteRenderer>().sprite = tableSprites[5];
+                    table.GetComponent<SpriteRenderer>().color = Color.white;
+                    break;
+                }
+
+            case Colors.olive:
+                {
+                    table.GetComponent<SpriteRenderer>().sprite = tableSprites[6];
+                    table.GetComponent<SpriteRenderer>().color = Color.white;
+                    break;
+                }
+
+            case Colors.wood2:
+                {
+                    table.GetComponent<SpriteRenderer>().sprite = tableSprites[7];
+                    table.GetComponent<SpriteRenderer>().color = Color.white;
+                    break;
+                }
+
+            default:
+                table.GetComponent<SpriteRenderer>().color = c;
+                table.GetComponent<SpriteRenderer>().sprite = tableSprites[0];
+                break;
+        }
+        GameObject[] lastMovePlat = GameObject.FindGameObjectsWithTag("lastMovePlate");
+        for (int i = 0; i < lastMovePlat.Length; i++)
+        {
+            if (i == 0) { 
+                lastMovePlat[i].GetComponent<SpriteRenderer>().color = ToColorTransparentLM(randomColor,220);
+            }
+            else
+            {
+                lastMovePlat[i].GetComponent<SpriteRenderer>().color = ToColorTransparentCM(randomColor, 200);
+            }
+        }
+        GameObject[] movePlates = GameObject.FindGameObjectsWithTag("MovePlate");
+        foreach(GameObject mv in movePlates)
+        {
+            if (!mv.GetComponent<MoveThePlate>().attack)
+            {
+                switch (randomColor)
+                {
+                    case Colors.anarchy:
+                        {
+                            mv.GetComponent<SpriteRenderer>().color = ToColorTransparent(randomColor, 204);
+                            break;
+                        }
+                    case Colors.JIK:
+                        {
+                            mv.GetComponent<SpriteRenderer>().color = ToColorTransparent(randomColor, 204);
+                            break;
+                        }
+                    case Colors.brightwood:
+                        {
+                            mv.GetComponent<SpriteRenderer>().color = ToColorTransparent(randomColor, 204);
+                            break;
+                        }
+                    case Colors.bright:
+                        {
+                            mv.GetComponent<SpriteRenderer>().color = ToColorTransparent(randomColor, 204);
+                            break;
+                        }
+                    case Colors.white:
+                        {
+                            mv.GetComponent<SpriteRenderer>().color = ToColorTransparent(randomColor, 204);
+                            break;
+                        }
+                    case Colors.blue:
+                        {
+                            mv.GetComponent<SpriteRenderer>().color = ToColorTransparent(randomColor, 204);
+                            break;
+                        }
+                    case Colors.gray:
+                        {
+                            mv.GetComponent<SpriteRenderer>().color = ToColorTransparent(randomColor, 204);
+                            break;
+                        }
+                    case Colors.dark:
+                        {
+                            mv.GetComponent<SpriteRenderer>().color = ToColorTransparent(randomColor, 204);
+                            break;
+                        }
+                    default:
+                        mv.GetComponent<SpriteRenderer>().color = ToColorTransparent(randomColor, 204);
+                        break;
+                }
+            }
+        }
+    }
+
     GameObject Create(string name, int x, int y)
     {
         GameObject obj = Instantiate(chesspiece, new Vector3(0, 0, 80), Quaternion.identity);
@@ -133,7 +473,35 @@ public class Game : MonoBehaviour
         cm.SetYBoard(y);
         cm.SetXBoard(x);
         cm.Activate();
+        PieceSpriteLoader(obj);
         return obj;
+    }
+    public void ReturnQueenSprite(GameObject obj)
+    {
+        switch (obj.name)
+        {
+            case "white_queen": obj.GetComponent<SpriteRenderer>().sprite = pieceSets[PieceSet].white_queen; break;
+            case "black_queen": obj.GetComponent<SpriteRenderer>().sprite = pieceSets[PieceSet].black_queen; break;
+        }
+    }
+    public void PieceSpriteLoader(GameObject obj)
+    {
+        switch (obj.name)
+        {
+            case "black_king": obj.GetComponent<SpriteRenderer>().sprite = pieceSets[PieceSet].black_king; break;
+            case "black_queen": obj.GetComponent<SpriteRenderer>().sprite = pieceSets[PieceSet].black_queen; break;
+            case "black_knight": obj.GetComponent<SpriteRenderer>().sprite = pieceSets[PieceSet].black_knight; break;
+            case "black_rook": obj.GetComponent<SpriteRenderer>().sprite = pieceSets[PieceSet].black_rook; break;
+            case "black_pawn":  obj.GetComponent<SpriteRenderer>().sprite = pieceSets[PieceSet].black_pawn; break;
+            case "black_bishop": obj.GetComponent<SpriteRenderer>().sprite = pieceSets[PieceSet].black_bishop; break;
+
+            case "white_king": obj.GetComponent<SpriteRenderer>().sprite = pieceSets[PieceSet].white_king; break;
+            case "white_queen": obj.GetComponent<SpriteRenderer>().sprite = pieceSets[PieceSet].white_queen; break;
+            case "white_knight": obj.GetComponent<SpriteRenderer>().sprite = pieceSets[PieceSet].white_knight; break;
+            case "white_rook": obj.GetComponent<SpriteRenderer>().sprite = pieceSets[PieceSet].white_rook; break;
+            case "white_pawn": obj.GetComponent<SpriteRenderer>().sprite = pieceSets[PieceSet].white_pawn; break;
+            case "white_bishop": obj.GetComponent<SpriteRenderer>().sprite = pieceSets[PieceSet].white_bishop; break;
+        }
     }
 
     public void SetPosition(GameObject obj)
@@ -170,7 +538,6 @@ public class Game : MonoBehaviour
 
     public void NextTurn()
     {
-
         if (currentPlayer == "white")
         {
             currentPlayer = "black";
@@ -179,7 +546,6 @@ public class Game : MonoBehaviour
         {
             currentPlayer = "white";
         }
-
     }
 
     public void Winner()
@@ -188,27 +554,15 @@ public class Game : MonoBehaviour
         NextTurn();
         if (PlayerPrefs.GetInt("darkMode") == 1)
         {
-            if (currentPlayer != "white")
+            if (currentPlayer != (white? "white" : "black"))
             {
-
                 GameObject a= Instantiate(Resources.Load<GameObject>("GameOver"));
                 AudioManager.PlayGameOver();
-                //playing all of the lights
-                //Game Over screen
             }
-            else if (currentPlayer == "white")
+            else if (currentPlayer == (white ? "white" : "black"))
             {
-                if (PlayerPrefs.GetInt("lv") == 20)
-                {
-                    //Something
-                    //endgame teaser
-                }
-                else
-                {
-                    PlayerPrefs.SetInt("lv", PlayerPrefs.GetInt("lv") + 1);
-                    StartCoroutine(FadeAlphaImg(dark, 10));
-                    StartCoroutine(FadeAlpha(YouWonText, 8));
-                }
+                StartCoroutine(FadeAlphaImg(dark, 10));
+                StartCoroutine(FadeAlpha(YouWonText, 8));
             }
         }
         else if (UI.win)
@@ -231,13 +585,10 @@ public class Game : MonoBehaviour
         float startAlpha = 0f;
         float endAlpha = 1f; 
         float elapsed = 0f;
-
-        // Set initial alpha
         color.a = startAlpha;
         image.color = color;
 
-        while (elapsed < time)
-        {
+        while (elapsed < time){
             elapsed += Time.deltaTime;
             float newAlpha = Mathf.Lerp(startAlpha, endAlpha, elapsed / time);
             color.a = newAlpha;
@@ -254,13 +605,10 @@ public class Game : MonoBehaviour
         float startAlpha = 0f;
         float endAlpha = 140/255f;
         float elapsed = 0f;
-
-        // Set initial alpha
         color.a = startAlpha;
         image.color = color;
 
-        while (elapsed < time)
-        {
+        while (elapsed < time){
             elapsed += Time.deltaTime;
             float newAlpha = Mathf.Lerp(startAlpha, endAlpha, elapsed / time);
             color.a = newAlpha;
@@ -404,6 +752,82 @@ public class Game : MonoBehaviour
         }
         return playerPieces;
     }
+    public void Chess960()
+    {
+        int w = 0, b = 0;
+        GameObject controller = GameObject.FindGameObjectWithTag("GameController");
+        controller.GetComponent<Game>().WCastling = false;
+        controller.GetComponent<Game>().BCastling = false;
+        int[] v = new int[8];
+
+        for (int i=0; i<8; i++)
+        playerWhite[w++] = Create("white_pawn", i, 1);
+        for (int i = 0; i < 8; i++)
+        playerBlack[b++] = Create("black_pawn", i, 6);
+        int b1 = UnityEngine.Random.Range(1, 5),b2=UnityEngine.Random.Range(1,5);
+        playerWhite[w++] = Create("white_bishop", b1 * 2 - 1, 0);
+        playerWhite[w++] = Create("white_bishop", b2 * 2 - 2, 0);
+        playerBlack[b++] = Create("black_bishop", b1 * 2 - 1, 7);
+        playerBlack[b++] = Create("black_bishop", b2 * 2 - 2, 7);
+        v[b1*2-1] = 1;
+        v[b2*2-2] = 1;
+        int q = SpecialRandomToInt(v);
+        v[q] = 1;
+        playerWhite[w++] = Create("white_queen", q, 0);
+        playerBlack[b++] = Create("black_queen", q, 7);
+        int k1 = SpecialRandomToInt(v);
+        v[k1] = 1;
+        int k2 = SpecialRandomToInt(v);
+        v[k2] = 1;
+        playerWhite[w++] = Create("white_knight", k1, 0);
+        playerWhite[w++] = Create("white_knight", k2, 0);
+        playerBlack[b++] = Create("black_knight", k1, 7);
+        playerBlack[b++] = Create("black_knight", k2, 7);
+        int r1=-1, k=-1, r2=0;
+        for(int i=0; i<8; i++)
+        {
+            if (v[i] == 0)
+            {
+                if (r1 == -1)
+                {
+                    r1 = i;
+                }
+                else if (k == -1)
+                {
+                    k = i;
+                }
+                else
+                {
+                    r2 = i;
+                    break;
+                }
+            }
+        }
+        playerWhite[w++] = Create("white_rook", r1, 0);
+        playerWhite[w++] = Create("white_king", k, 0);
+        playerWhite[w++] = Create("white_rook", r2, 0);
+        playerBlack[b++] = Create("black_rook", r1, 7);
+        playerBlack[b++] = Create("black_king", k, 7);
+        playerBlack[b++] = Create("black_rook", r2, 7);
+    }
+    public int SpecialRandomToInt(int[] v)
+    {
+        int t = 0;
+        for (int i = 0; i < 8; i++)
+            if (v[i]==0)
+            t++;
+        int y = UnityEngine.Random.Range(1, t + 1);
+        for(int i=0; i<8; i++)
+        {
+            if (v[i] == 0)
+            {
+                y--;
+                if (y == 0)
+                    return i;
+            }
+        }
+        return 0;
+    }
     public void LoadThePositionFromFen(string fen)
     {
             GameObject controller = GameObject.FindGameObjectWithTag("GameController");
@@ -412,9 +836,6 @@ public class Game : MonoBehaviour
                 fen = PlayerPrefs.GetString("LastScene");
             Debug.Log(fen);
             }
-            /*
-            if(SceneManager.GetActiveScene().name == "Multiplayer lobby")
-            MuliplayerThings();*/
             int y = fen.Length;
             int u = 0;
             int w = 0, b = 0;
@@ -687,13 +1108,8 @@ public class Game : MonoBehaviour
             PlayerPrefs.SetString("LastScene", "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
     }
 
-
     public bool GetFiftyMoveRule()
     {
-
         return (FullMoves == 50);
-
     }
-
-
 }

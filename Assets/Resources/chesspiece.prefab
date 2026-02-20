@@ -30,7 +30,7 @@ Transform:
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: -11.6, y: -3.3, z: 80}
-  m_LocalScale: {x: 0.23, y: 0.23, z: 1}
+  m_LocalScale: {x: 0.25, y: 0.25, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 0}
@@ -102,12 +102,10 @@ MonoBehaviour:
   MoveThePlatescript: {fileID: 0}
   gameManager: {fileID: 0}
   LegalMovesManager: {fileID: 0}
-  MpMan: {fileID: 0}
   controller: {fileID: 0}
   movePlate: {fileID: 889220124620453694, guid: e25be6a11806d4149a8a03fcf7410b15, type: 3}
   player: 
   currentPlayer: white
-  MyTurn: 0
   DMPawn: {fileID: 0}
   xBoard: -1
   yBoard: -1
@@ -120,7 +118,7 @@ MonoBehaviour:
   white_king: {fileID: 21300000, guid: 5aacf04af192eb349aaa0eefc3c61db0, type: 3}
   white_queen: {fileID: 21300000, guid: 8386be760a5cc4a4fa51a4adcc5fa305, type: 3}
   white_bishop: {fileID: 21300000, guid: d60b335d42738bd4d812ca69218da50c, type: 3}
-  white_knight: {fileID: 21300000, guid: 3bc991204ed57ba428730df5bd316b83, type: 3}
+  white_knight: {fileID: 21300000, guid: 2b511b77a7e9ce445af0681733bd5871, type: 3}
   white_rook: {fileID: 21300000, guid: 04f6f120a93871848851f0e26accb32c, type: 3}
   white_pawn: {fileID: 21300000, guid: d5e8d908fada76d43aec313790d7dbba, type: 3}
   Piece: {fileID: 0}
@@ -136,7 +134,6 @@ MonoBehaviour:
   TXR: 0
   TYR: 0
   castling: 0
-  multiplayer: 0
 --- !u!114 &5418897422322895827
 MonoBehaviour:
   m_ObjectHideFlags: 0

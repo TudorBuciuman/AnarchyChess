@@ -166,7 +166,7 @@ MonoBehaviour:
   txr: 0
   checkl: 0
   source: {fileID: 1467648238147565499, guid: 051a7ed8f1179ab47a8e68bb29499b91, type: 3}
-  move: {fileID: 8300000, guid: f9117cc86d1cc414caecc05e79be0fcd, type: 3}
+  move: {fileID: 8300000, guid: 3826c51062a7f9c4981101e7fbed813d, type: 3}
   moveattack: {fileID: 8300000, guid: 4328e6c5a9ac2f34aaf00e7732377ce4, type: 3}
   check: {fileID: 8300000, guid: 8802e8e115990d945888f4169df26311, type: 3}
   enpassant: {fileID: 8300000, guid: be3bd65e3f0d4b545849cbf0051b8d75, type: 3}
