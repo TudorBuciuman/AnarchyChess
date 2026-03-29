@@ -1,0 +1,50 @@
+apply plugin: 'com.android.library'
+**APPLY_PLUGINS**
+
+dependencies {
+    implementation fileTree(dir: 'libs', include: ['*.jar'])
+**DEPS**}
+
+android {
+    ndkPath "**NDKPATH**"
+    namespace "com.unity3d.player"
+
+    // FIX: Use 34 or 35 here to avoid the aapt2 crash with API 36
+    compileSdkVersion 36
+    buildToolsVersion '**BUILDTOOLS**'
+
+    compileOptions {
+        // Android 16 prefers Java 17, but Unity 2023 defaults to 11.
+        // If you get a "Class version" error, change these to VERSION_17
+        sourceCompatibility JavaVersion.VERSION_11
+        targetCompatibility JavaVersion.VERSION_11
+    }
+
+    defaultConfig {
+        minSdkVersion **MINSDKVERSION**
+        
+        // This allows you to test on your Android 16 device
+        targetSdkVersion 36 
+        
+        ndk {
+            abiFilters **ABIFILTERS**
+        }
+        versionCode **VERSIONCODE**
+        versionName '**VERSIONNAME**'
+        consumerProguardFiles 'proguard-unity.txt'**USER_PROGUARD**
+**DEFAULT_CONFIG_SETUP**
+    }
+
+    lintOptions {
+        abortOnError false
+        checkReleaseBuilds false // Add this to skip strict API checks
+    }
+
+    aaptOptions {
+        noCompress = **BUILTIN_NOCOMPRESS** + unityStreamingAssets.tokenize(', ')
+        ignoreAssetsPattern = "!.svn:!.git:!.ds_store:!*.scc:!CVS:!thumbs.db:!picasa.ini:!*~"
+    }**PACKAGING_OPTIONS**
+}
+**IL_CPP_BUILD_SETUP**
+**SOURCE_BUILD_SETUP**
+**EXTERNAL_SOURCES**

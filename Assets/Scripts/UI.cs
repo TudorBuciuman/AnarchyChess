@@ -1,11 +1,13 @@
 using System.Collections;
 using System.Collections.Generic;
+using Unity.VisualScripting;
 using UnityEngine;
 using UnityEngine.UI;
 
 public class UI : MonoBehaviour
 {
     public GameObject logo,windowsLogo,windowsLego,windowsBack;
+    public GameObject AndroidLogo,AndroidCoolBackground;
     public static bool pressed=false;
     public static bool win = false;
     public static bool DarkMode=false;
@@ -30,8 +32,10 @@ public class UI : MonoBehaviour
         logo.SetActive(false);
         win = true;
 #endif
-        //PlayerPrefs.SetInt("darkMode",1);
-        //DarkMode = PlayerPrefs.GetInt("darkMode")==1;
+        if (!win)
+        {
+            AndroidCoolBackground.SetActive(true);
+        }
 
         //if (DarkMode)
         {
@@ -41,16 +45,15 @@ public class UI : MonoBehaviour
         }
     }
     public void Start()
-    {
-        Cursor.lockState = CursorLockMode.None;
-        Cursor.visible = true;
-        
+    {   
         if (!pressed)
         {
             StartCoroutine(Wait());
         }
         else
         {
+            Cursor.lockState = CursorLockMode.None;
+            Cursor.visible = true;
             logo.SetActive(false);
             windowsLogo.SetActive(false);
         }
@@ -72,6 +75,9 @@ public class UI : MonoBehaviour
         pressed = true;
         logo.SetActive(false);
         windowsLogo.SetActive(false);
+        Cursor.lockState = CursorLockMode.None;
+        Cursor.visible = true;
+        yield break;
     }
     public void Protocol()
     {

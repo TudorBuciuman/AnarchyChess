@@ -140,7 +140,8 @@ TextureImporter:
     edges: []
     weights: []
     secondaryTextures: []
-    nameFileIdTable: {}
+    nameFileIdTable:
+      anarchtrailer_0: 8319173392200923654
   mipmapLimitGroupName: 
   pSDRemoveMatte: 0
   userData: 

@@ -15,8 +15,8 @@ public class Game : MonoBehaviour
     public string MyTurn = "a";
     public GameObject EPassant = null;
     public GameObject[,] positions = new GameObject[8, 8];
-    public GameObject[] playerBlack = new GameObject[20];
-    public GameObject[] playerWhite = new GameObject[20];
+    public GameObject[] playerBlack = new GameObject[50];
+    public GameObject[] playerWhite = new GameObject[50];
     public string currentPlayer = "white";
     public static bool white = true;
     public bool gameOver = false;
@@ -70,8 +70,8 @@ public class Game : MonoBehaviour
         white = UnityEngine.Random.Range(0, 2) == 1;
         PieceSetManager();
         Theme();
-        LoadThePositionFromFen(fen);
-        //Chess960();
+
+        ChoseMinigame();
         
         for (int i = 0; i < 16; i++)
         {
@@ -86,6 +86,23 @@ public class Game : MonoBehaviour
         if (!white)
         {
             GameObject.FindGameObjectWithTag("GameController").GetComponent<ChessBot>().BotTurn();
+        }
+    }
+    public void ChoseMinigame()
+    {
+        int random = UnityEngine.Random.Range(0, 10);
+        if (random > 7)
+        {
+            Chess960();
+        }
+        else if (random == 7)
+        {
+            fen = "rnbqkbnr/pppppppp/8/1PP2PP1/PPPPPPPP/PPPPPPPP/PPPPPPPP/PPPPPPPP w kq - 0 1";
+            LoadThePositionFromFen(fen);
+        }
+        else
+        {
+            LoadThePositionFromFen(fen);
         }
     }
     public void Update()
@@ -274,6 +291,39 @@ public class Game : MonoBehaviour
                 return new Color(0.3f, 0.3f, 0.3f, 1.0f);
         }
     }
+    public static Color ToColorBoardEdge(Colors c)
+    {
+        switch (c)
+        {
+            case Colors.metal:
+                return new Color32(0x3A, 0x3A, 0x3A, 255);
+
+            default:
+                return Color.black;
+        }
+    }
+    public static Color ToColorBright(Colors c)
+    {
+        switch (c)
+        {
+            case Colors.metal:
+                return new Color32(0xDB, 0xDB, 0xDB, 255);
+
+            default:
+                return Color.black;
+        }
+    }
+    public static Color ToColorDark(Colors c)
+    {
+        switch (c)
+        {
+            case Colors.metal:
+                return new Color32(0x00, 0x00, 0x00, 255);
+
+            default:
+                return Color.black;
+        }
+    }
     public void PieceSetManager()
     {
         int y = UnityEngine.Random.Range(0, pieceSets.Length);
@@ -304,6 +354,11 @@ public class Game : MonoBehaviour
     {
         GameObject table = GameObject.Find("tabla_sah");
         table.transform.localScale = new Vector2(multiplier, multiplier);
+        if (multiplier == 2.4f)
+        {
+            GameObject.Find("Other").transform.localScale = new Vector2(2.4f / 4.5f, 2.4f / 4.5f);
+            GameObject.Find("Board_edge").transform.localScale *= new Vector2(2.4f / 4.5f, 2.4f / 4.5f);
+        }
         Colors randomColor = GetTheColor();
         //PieceSetManager();
         matchTheme = randomColor;
@@ -376,6 +431,11 @@ public class Game : MonoBehaviour
                 {
                     table.GetComponent<SpriteRenderer>().sprite = tableSprites[5];
                     table.GetComponent<SpriteRenderer>().color = Color.white;
+                    GameObject.Find("Board_edge").GetComponent<SpriteRenderer>().color = ToColorBoardEdge(Colors.metal);
+                    GameObject.Find("aceg").GetComponent<Text>().color = ToColorBright(Colors.metal);
+                    GameObject.Find("1357").GetComponent<Text>().color = ToColorBright(Colors.metal);
+                    GameObject.Find("bdfh").GetComponent<Text>().color = ToColorBright(Colors.metal);
+                    GameObject.Find("2468").GetComponent<Text>().color = ToColorBright(Colors.metal);
                     break;
                 }
 
@@ -1024,8 +1084,6 @@ public class Game : MonoBehaviour
     {
         if (!IsGameOver())
         {
-
-
             char[] TheFen = new char[64];
             int u = 0, emptySquareCount = 0;
 
@@ -1107,9 +1165,92 @@ public class Game : MonoBehaviour
         else
             PlayerPrefs.SetString("LastScene", "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
     }
+    public string GetMatchFen()
+    {
+        char[] TheFen = new char[64];
+        int u = 0, emptySquareCount = 0;
 
+        for (int j = 7; j >= 0; j--)
+        {
+            for (int i = 0; i <= 7; i++)
+            {
+                if (positions[i, j] != null)
+                {
+                    if (emptySquareCount > 0)
+                    {
+                        TheFen[u++] = (char)('0' + emptySquareCount);
+                        emptySquareCount = 0;
+                    }
+
+                    switch (positions[i, j].name)
+                    {
+                        case "white_king":
+                            TheFen[u++] = 'K';
+                            break;
+                        case "white_queen":
+                            TheFen[u++] = 'Q';
+                            break;
+                        case "white_pawn":
+                            TheFen[u++] = 'P';
+                            break;
+                        case "white_knight":
+                            TheFen[u++] = 'N';
+                            break;
+                        case "white_rook":
+                            TheFen[u++] = 'R';
+                            break;
+                        case "white_bishop":
+                            TheFen[u++] = 'B';
+                            break;
+                        case "black_king":
+                            TheFen[u++] = 'k';
+                            break;
+                        case "black_queen":
+                            TheFen[u++] = 'q';
+                            break;
+                        case "black_pawn":
+                            TheFen[u++] = 'p';
+                            break;
+                        case "black_knight":
+                            TheFen[u++] = 'n';
+                            break;
+                        case "black_rook":
+                            TheFen[u++] = 'r';
+                            break;
+                        case "black_bishop":
+                            TheFen[u++] = 'b';
+                            break;
+                    }
+                }
+                else
+                {
+                    emptySquareCount++;
+                }
+            }
+
+            if (emptySquareCount > 0)
+            {
+                TheFen[u++] = (char)('0' + emptySquareCount);
+                emptySquareCount = 0;
+            }
+
+            if (j != 0)
+            {
+                TheFen[u++] = '/';
+            }
+
+        }
+        TheFen[u++] = ' ';
+        TheFen[u++] = (currentPlayer == "white") ? 'w' : 'b';
+        return new string(TheFen);
+    }
     public bool GetFiftyMoveRule()
     {
         return (FullMoves == 50);
+    }
+
+    public void SetPosition(GameObject piece, int x, int y) 
+    { 
+        positions[x, y] = piece; 
     }
 }

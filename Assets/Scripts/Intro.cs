@@ -6,13 +6,14 @@ using UnityEngine.UI;
 public class Intro : MonoBehaviour
 {
     public Image logo, TTG;
+    public Image redImage;
     public Image Wlogo, WTTG;
     public Text Text;
     public AudioClip boomsound;
     public AudioSource AudioSource;
     public Sprite corrupted;
     public static byte title_screen;
-    bool win = false;
+    private bool win = false;
     private void Awake()
     {
 #if UNITY_STANDALONE_WIN
@@ -27,6 +28,7 @@ public class Intro : MonoBehaviour
     void Start()
     {
         StartCoroutine(PlayOnSight());
+        StartCoroutine(ColorToRed());
         if (PlayerPrefs.GetInt("Intro") == 1)
         {
             StartCoroutine(Waitting());
@@ -41,6 +43,20 @@ public class Intro : MonoBehaviour
     {
         yield return new WaitForSeconds(6.3f);
         SceneManager.LoadScene("Game UI");
+    }
+    private IEnumerator ColorToRed()
+    {
+        float t = 0;
+        Color32 c = new Color32(0xED, 0x1B, 0x24, 255);
+        Color32 black = new Color32(0x00, 0x00, 0x00, 255);
+        while (t <= 2)
+        {
+            redImage.color = Color.Lerp(black, c, t / 2f);
+            t += Time.deltaTime;
+            yield return null;
+        }
+        redImage.color = c;
+        yield break;
     }
     private IEnumerator Waitting()
     {

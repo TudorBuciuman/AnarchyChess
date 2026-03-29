@@ -1,3 +1,4 @@
+using System.Collections;
 using UnityEngine;
 
 public class MoveThePlate : MonoBehaviour
@@ -63,11 +64,19 @@ public class MoveThePlate : MonoBehaviour
     public void OnMouseUp()
     {
         MakeMove();
-        if(!legalMovesManager.GetComponent<Game>().IsGameOver())
+        StartCoroutine(BotMoveCaller());
+    }
+    public IEnumerator BotMoveCaller()
+    {
+        //It needs to be in a differernt frame
+        //otherwise it pausese my move animation till it finds his
+        //yield return null;
+        if (!legalMovesManager.GetComponent<Game>().IsGameOver())
         {
             controller = GameObject.FindGameObjectWithTag("GameController");
             controller.GetComponent<ChessBot>().BotTurn();
         }
+        yield return 0;
     }
     public void MakeMove() {
         controller = GameObject.FindGameObjectWithTag("GameController");
@@ -135,6 +144,7 @@ public class MoveThePlate : MonoBehaviour
         if (PwnTQn)
         {
             piece.GetComponent<Chessman>().PawnToQueen(piece);
+            PwnTQn = false;
         }
         else if (castling)
         {
@@ -219,6 +229,8 @@ public class MoveThePlate : MonoBehaviour
             LMP.GetComponent<SpriteRenderer>().color = Game.ToColorTransparentLM(Game.matchTheme, 200);
             //LMP.GetComponent<SpriteRenderer>().color = new Color(0.8f, 0.6f, 0.3f, 1.0f);
         }
+        //Debug.Log(controller.GetComponent<Game>().GetMatchFen());
+        //StartCoroutine(BotMoveCaller());
 
     }
     public void SetCoords(int x, int y)
