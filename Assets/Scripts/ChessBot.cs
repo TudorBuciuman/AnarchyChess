@@ -12,16 +12,13 @@ public class ChessBot : MonoBehaviour
     public LegalMovesManager LegalMovesManager;
     public Game game;
 
-    private const int searchDepth = 4;
+    private int searchDepth = 4; //I count the full moves, which means I count my move and of my enemy in the same move
 
-    // Only used by the Unity-side move generation (GenerateAllMoves).
-    // The threaded path never touches this field.
     private List<int> availableMoves;
     private bool moveFound = false;
 
-    // ── Piece encoding ────────────────────────────────────────────────────────
     // Positive = white, Negative = black, 0 = empty
-    // |value|: King=6, Queen=5, Rook=4, Bishop=3, Knight=2, Pawn=1
+    // value: King=6, Queen=5, Rook=4, Bishop=3, Knight=2, Pawn=1
     private const int W_PAWN = 1; private const int B_PAWN = -1;
     private const int W_KNIGHT = 2; private const int B_KNIGHT = -2;
     private const int W_BISHOP = 3; private const int B_BISHOP = -3;
@@ -29,31 +26,23 @@ public class ChessBot : MonoBehaviour
     private const int W_QUEEN = 5; private const int B_QUEEN = -5;
     private const int W_KING = 6; private const int B_KING = -6;
 
-    // ── Castling bonus awarded in evaluation ─────────────────────────────────
-    // Applied once per side that has castled; large enough to make castling
-    // clearly preferable to shuffling the king sideways.
     private const int CastlingBonus = 60;
 
-    // ── Pure board state (no Unity types) ────────────────────────────────────
     private struct BoardState
     {
-        public int[,] Board;            // [x,y] encoded piece or 0
+        public int[,] Board;     // [x,y] encoded piece or 0
         public bool BotIsWhite;
-
-        // En-passant
         public bool EnPassantActive;
-        public int EnPassantX;         // column of the pawn that can be captured
-        public int EnPassantY;         // row    of the pawn that can be captured
+        public int EnPassantX;   // column of the pawn that could be captured
+        public int EnPassantY;   // row of the pawn that could be captured
 
-        // Castling rights — lost as soon as the relevant piece moves
         public bool WhiteKingMoved;
         public bool BlackKingMoved;
-        public bool WhiteRookAMoved;    // a-file rook (x=0)
-        public bool WhiteRookHMoved;    // h-file rook (x=7)
+        public bool WhiteRookAMoved;    
+        public bool WhiteRookHMoved;   
         public bool BlackRookAMoved;
         public bool BlackRookHMoved;
 
-        // Track whether each side has already castled (for the evaluation bonus)
         public bool WhiteHasCastled;
         public bool BlackHasCastled;
 
@@ -65,19 +54,17 @@ public class ChessBot : MonoBehaviour
         }
     }
 
-    // ── Pure move representation (no GameObjects) ─────────────────────────────
     private struct PureMove
     {
         public int FromX, FromY;
         public int ToX, ToY;
-        public int Piece;              // encoded piece that is moving
-        public int Captured;           // encoded piece on target square (0 = quiet)
+        public int Piece;              
+        public int Captured;           
         public bool IsEnPassant;
         public bool IsCastleKingside;
         public bool IsCastleQueenside;
     }
 
-    // ── Original MoveCandidate (kept for ExecuteBestMove) ────────────────────
     private struct MoveCandidate
     {
         public GameObject piece;
@@ -88,12 +75,12 @@ public class ChessBot : MonoBehaviour
         public bool isCastleQueenside;
     }
 
-    // =========================================================================
-    //  Entry points
-    // =========================================================================
-
     public void BotTurn()
     {
+        if (Game.currentMinigame == Game.Minigame.FogOfWar)
+            searchDepth = 2;
+        if (Game.currentMinigame == Game.Minigame.Duck)
+            searchDepth = 5;
         StartCoroutine(BotTurnAndPauseOneFrame());
     }
 
@@ -105,12 +92,10 @@ public class ChessBot : MonoBehaviour
             MakeBotMoveAsync();
     }
 
-    // =========================================================================
-    //  MakeBotMoveAsync
-    //  1. Snapshots the board and builds root moves on the main thread.
-    //  2. Searches entirely on thread-pool threads (Task.Run + Parallel.For).
-    //  3. Resumes on the main thread to execute the chosen move.
-    // =========================================================================
+    //MakeBotMoveAsync
+    //1. Snapshots the board and builds root moves on the main thread
+    //2. Searches entirely on thread-pool threads (Task.Run + Parallel.For)
+    //3. Resumes on the main thread to execute the chosen move
 
     private async void MakeBotMoveAsync()
     {
@@ -123,7 +108,6 @@ public class ChessBot : MonoBehaviour
 
         bool botIsWhite = botPieces[0].name.StartsWith("white");
 
-        // Build root Unity candidates (needs Unity API — main thread only).
         List<MoveCandidate> rootCandidates = GenerateAllMoves(botPieces);
         if (rootCandidates.Count == 0)
         {
@@ -134,7 +118,6 @@ public class ChessBot : MonoBehaviour
 
         BoardState snapshot = CaptureBoard(botIsWhite);
 
-        // Map each MoveCandidate to a matching PureMove using the snapshot.
         List<PureMove> rootPureMoves = rootCandidates
             .Select(mc => new PureMove
             {
@@ -155,10 +138,7 @@ public class ChessBot : MonoBehaviour
         ExecuteBestMove(rootCandidates[bestIndex]);
     }
 
-    // =========================================================================
-    //  CaptureBoard — snapshot Unity state into a thread-safe BoardState.
-    //  Must be called on the main thread.
-    // =========================================================================
+    //Must be called on the main thread!!!!!
 
     private BoardState CaptureBoard(bool botIsWhite)
     {
@@ -176,7 +156,7 @@ public class ChessBot : MonoBehaviour
                     state.Board[x, y] = EncodeGameObject(p);
             }
 
-        // En-passant
+        // Google En passant
         Game gm = controller.GetComponent<Game>();
         Game.Move last = gm.GetTheLastMove();
         if (last?.piece != null && last.piece.name.Contains("pawn"))
@@ -198,10 +178,6 @@ public class ChessBot : MonoBehaviour
                 state.EnPassantY = ep.GetYBoard();
             }
         }
-
-        // Castling rights: infer from piece positions.
-        // If a king or rook is no longer on its starting square we treat the
-        // right as lost.  This is conservative but safe without move history.
         state.WhiteKingMoved = state.Board[4, 0] != W_KING;
         state.BlackKingMoved = state.Board[4, 7] != B_KING;
         state.WhiteRookAMoved = state.Board[0, 0] != W_ROOK;
@@ -209,8 +185,6 @@ public class ChessBot : MonoBehaviour
         state.BlackRookAMoved = state.Board[0, 7] != B_ROOK;
         state.BlackRookHMoved = state.Board[7, 7] != B_ROOK;
 
-        // Has-castled flags: detect if the king is already on a castled square
-        // (g1/g8 for kingside, c1/c8 for queenside).
         state.WhiteHasCastled =
             state.Board[6, 0] == W_KING || state.Board[2, 0] == W_KING;
         state.BlackHasCastled =
@@ -218,10 +192,6 @@ public class ChessBot : MonoBehaviour
 
         return state;
     }
-
-    // =========================================================================
-    //  Piece encoding helpers
-    // =========================================================================
 
     private int EncodeGameObject(GameObject p)
     {
@@ -258,19 +228,11 @@ public class ChessBot : MonoBehaviour
             case 3: return 3;   // bishop
             case 4: return 5;   // rook
             case 5: return 9;   // queen
-            case 6: return 0;   // king (handled separately in eval)
+            case 6: return 0;   // king (handled separately in eval, because you obviously cant take the king)
         }
         return 0;
     }
 
-    // =========================================================================
-    //  Game-phase detection
-    //  Phase is a float in [0,1]:  0 = pure opening, 1 = pure endgame.
-    //  We use total non-pawn material remaining as the signal.
-    // =========================================================================
-
-    // Maximum non-pawn material at game start (both sides):
-    // 2*(2*3 + 2*3 + 2*5 + 9) = 2*25 = 50, stored as centipawns * 100 → 5000
     private const int MaxNonPawnMaterial = 5000;
 
     private static float GamePhase(BoardState state)
@@ -281,16 +243,13 @@ public class ChessBot : MonoBehaviour
             {
                 int p = state.Board[x, y];
                 int abs = Math.Abs(p);
-                if (abs >= 2 && abs <= 5)           // knight/bishop/rook/queen only
+                if (abs >= 2 && abs <= 5)          
                     material += PieceValue(p) * 100;
             }
-        // phase=0 means full material (opening/middlegame), phase=1 means empty (endgame)
         return 1f - Math.Min(1f, (float)material / MaxNonPawnMaterial);
     }
 
-    // =========================================================================
-    //  FindBestMoveIndex — parallel root search, thread-pool only.
-    // =========================================================================
+    //parallel root search, thread-pool only!!
 
     private int FindBestMoveIndex(BoardState state, List<PureMove> moves, bool botIsWhite)
     {
@@ -310,10 +269,6 @@ public class ChessBot : MonoBehaviour
 
         return best;
     }
-
-    // =========================================================================
-    //  MinimaxPure — thread-safe alpha-beta, pure C# only.
-    // =========================================================================
 
     private int MinimaxPure(BoardState state, int depth, int alpha, int beta,
                             bool maximising, bool botIsWhite)
@@ -355,10 +310,6 @@ public class ChessBot : MonoBehaviour
         }
     }
 
-    // =========================================================================
-    //  GenerateAllMovesFromState — pure move generation, zero Unity API.
-    // =========================================================================
-
     private List<PureMove> GenerateAllMovesFromState(BoardState state, bool botSide)
     {
         var moves = new List<PureMove>();
@@ -394,9 +345,6 @@ public class ChessBot : MonoBehaviour
             }
         return moves;
     }
-
-    // ── Sliding pieces ────────────────────────────────────────────────────────
-
     private void GenerateSlidingMoves(BoardState state, int x, int y, int piece,
                                       List<PureMove> moves, (int dx, int dy)[] dirs)
     {
@@ -420,10 +368,7 @@ public class ChessBot : MonoBehaviour
         }
     }
 
-    // ── Knight ────────────────────────────────────────────────────────────────
-
-    private void GenerateKnightMoves(BoardState state, int x, int y, int piece,
-                                     List<PureMove> moves)
+    private void GenerateKnightMoves(BoardState state, int x, int y, int piece, List<PureMove> moves)
     {
         int[][] offs = { new[]{1,2},new[]{-1,2},new[]{2,1},new[]{-2,1},
                          new[]{-2,-1},new[]{-1,-2},new[]{1,-2},new[]{2,-1} };
@@ -437,9 +382,6 @@ public class ChessBot : MonoBehaviour
                 { FromX = x, FromY = y, ToX = nx, ToY = ny, Piece = piece, Captured = target });
         }
     }
-
-    // ── King normal moves ─────────────────────────────────────────────────────
-
     private void GenerateKingMoves(BoardState state, int x, int y, int piece,
                                    List<PureMove> moves)
     {
@@ -456,22 +398,12 @@ public class ChessBot : MonoBehaviour
             }
     }
 
-    // ── Castling ─────────────────────────────────────────────────────────────
-    // Rules checked here:
-    //   1. King and the relevant rook must not have moved.
-    //   2. All squares between them must be empty.
-    //   3. The king must not currently be in check (not checked — you can add it
-    //      if your LegalMovesManager exposes a pure IsInCheck; for now the bot
-    //      will treat castling as legal and the Unity execution path will reject
-    //      it via LegalMovesManager.IsLegal if the king is in check).
-
     private void GenerateCastlingMoves(BoardState state, int x, int y, int piece,
                                        List<PureMove> moves)
     {
         bool white = IsWhite(piece);
         int row = white ? 0 : 7;
 
-        // King must be on its starting square.
         if (x != 4 || y != row) return;
 
         bool kingMoved = white ? state.WhiteKingMoved : state.BlackKingMoved;
@@ -480,7 +412,7 @@ public class ChessBot : MonoBehaviour
 
         if (kingMoved) return;
 
-        // Kingside (h-rook): squares f and g must be empty.
+        //kingside: squares f and g must be empty
         if (!rookHMoved &&
             state.Board[5, row] == 0 &&
             state.Board[6, row] == 0)
@@ -496,7 +428,7 @@ public class ChessBot : MonoBehaviour
             });
         }
 
-        // Queenside (a-rook): squares b, c, d must be empty.
+        //Queenside: squares b, c, d must be empty
         if (!rookAMoved &&
             state.Board[3, row] == 0 &&
             state.Board[2, row] == 0 &&
@@ -513,8 +445,6 @@ public class ChessBot : MonoBehaviour
             });
         }
     }
-
-    // ── Pawns ─────────────────────────────────────────────────────────────────
 
     private void GeneratePawnMoves(BoardState state, int x, int y, int piece,
                                    List<PureMove> moves)
@@ -561,26 +491,18 @@ public class ChessBot : MonoBehaviour
             }
         }
     }
-
-    // =========================================================================
-    //  ApplyPureMove — returns a NEW BoardState; no undo stack needed.
-    // =========================================================================
-
     private BoardState ApplyPureMove(BoardState state, PureMove move)
     {
         BoardState next = state.DeepCopy();
         bool white = IsWhite(move.Piece);
         int row = white ? 0 : 7;
 
-        // Move the piece.
         next.Board[move.FromX, move.FromY] = 0;
         next.Board[move.ToX, move.ToY] = move.Piece;
 
-        // En-passant: remove the captured pawn on the same rank.
         if (move.IsEnPassant)
             next.Board[move.ToX, move.FromY] = 0;
 
-        // Castling: also slide the rook.
         if (move.IsCastleKingside)
         {
             next.Board[7, row] = 0;
@@ -596,14 +518,12 @@ public class ChessBot : MonoBehaviour
             else next.BlackHasCastled = true;
         }
 
-        // Pawn promotion → queen.
         if (Math.Abs(move.Piece) == 1)
         {
             if ((white && move.ToY == 7) || (!white && move.ToY == 0))
                 next.Board[move.ToX, move.ToY] = white ? W_QUEEN : B_QUEEN;
         }
 
-        // Update castling-rights flags.
         if (Math.Abs(move.Piece) == 6)
         {
             if (white) next.WhiteKingMoved = true;
@@ -614,7 +534,6 @@ public class ChessBot : MonoBehaviour
         if (move.FromX == 0 && move.FromY == 7) next.BlackRookAMoved = true;
         if (move.FromX == 7 && move.FromY == 7) next.BlackRookHMoved = true;
 
-        // En-passant for next ply.
         next.EnPassantActive = false;
         if (Math.Abs(move.Piece) == 1 && Math.Abs(move.ToY - move.FromY) == 2)
         {
@@ -626,9 +545,7 @@ public class ChessBot : MonoBehaviour
         return next;
     }
 
-    // =========================================================================
-    //  EvaluatePure — material + positional + castling + game-phase king PST
-    // =========================================================================
+    //EvaluatePure = material + positional + castling + game-phase king
 
     private int EvaluatePure(BoardState state, bool botIsWhite)
     {
@@ -650,7 +567,6 @@ public class ChessBot : MonoBehaviour
                     score -= value;
             }
 
-        // Castling bonus: reward whichever side has already castled.
         bool botCastled = botIsWhite ? state.WhiteHasCastled : state.BlackHasCastled;
         bool oppCastled = botIsWhite ? state.BlackHasCastled : state.WhiteHasCastled;
         if (botCastled) score += CastlingBonus;
@@ -658,14 +574,6 @@ public class ChessBot : MonoBehaviour
 
         return score;
     }
-
-    // =========================================================================
-    //  GetPositionalBonusPure
-    //  King uses a phase-blended PST: middlegame table (stay sheltered, castled)
-    //  blended smoothly with the endgame table (centralise).
-    //  All other pieces are unchanged from your original bonus logic.
-    // =========================================================================
-
     private int GetPositionalBonusPure(int piece, int x, int y, float phase)
     {
         int dist = Math.Max(Math.Abs(x - 3), Math.Abs(y - 3));
@@ -683,9 +591,7 @@ public class ChessBot : MonoBehaviour
 
             case W_KING:
                 {
-                    // Middlegame: reward corner shelter (g1/c1), penalise exposure.
                     int mgBonus = KingMidgameBonus(x, y, white: true);
-                    // Endgame: centralise (mirror of pawn centre bonus).
                     int egBonus = (4 - dist) * 8;
                     return (int)Mathf.Lerp(mgBonus, egBonus, phase);
                 }
@@ -699,52 +605,39 @@ public class ChessBot : MonoBehaviour
         return 0;
     }
 
-    // Piece-square table for the king in the middlegame.
-    // Rewards castled positions (g1/c1 for white, g8/c8 for black),
-    // penalises central exposure and uncastled edge wandering.
+    //Piece position matrix for the king in the middlegame
+    //penalises central exposure and uncastled edge wandering
+    //Rewards castled positions (g1/c1 for white, g8/c8 for black)
+    //I'm actually really proud of this design
     private static int KingMidgameBonus(int x, int y, bool white)
     {
-        // Normalise so row 0 is always "own back rank".
         int row = white ? y : (7 - y);
-
-        // The PST is defined for white; black uses the same table on their row.
-        // Values per (col, normalised-row):
-        //   row 0 = back rank, row 7 = opponent's back rank
         int[,] pst = {
-            // col:  0    1    2    3    4    5    6    7
-            /* r0 */ { 20,  30,  10,   0,   0,  10,  30,  20 },  // back rank
-            /* r1 */ {  0,   0,   0, -10, -10,   0,   0,   0 },
-            /* r2 */ {-10, -20, -20, -20, -20, -20, -20, -10 },
-            /* r3 */ {-20, -30, -30, -40, -40, -30, -30, -20 },
-            /* r4 */ {-30, -40, -40, -50, -50, -40, -40, -30 },
-            /* r5 */ {-30, -40, -40, -50, -50, -40, -40, -30 },
-            /* r6 */ {-30, -40, -40, -50, -50, -40, -40, -30 },
-            /* r7 */ {-30, -40, -40, -50, -50, -40, -40, -30 },
+            { 20,  30,  10,   0,   0,  10,  30,  20 },  
+            {  0,   0,   0, -10, -10,   0,   0,   0 },
+            {-10, -20, -20, -20, -20, -20, -20, -10 },
+            {-20, -30, -30, -40, -40, -30, -30, -20 },
+            {-30, -40, -40, -50, -50, -40, -40, -30 },
+            {-30, -40, -40, -50, -50, -40, -40, -30 },
+            {-30, -40, -40, -50, -50, -40, -40, -30 },
+            {-30, -40, -40, -50, -50, -40, -40, -30 },
         };
 
         if (row < 0 || row > 7 || x < 0 || x > 7) return 0;
         return pst[row, x];
     }
 
-    // =========================================================================
-    //  OrderPureMoves — MVV-LVA, castling moves ranked above quiet moves.
-    // =========================================================================
-
     private List<PureMove> OrderPureMoves(List<PureMove> moves, BoardState state)
     {
         return moves
             .OrderByDescending(m =>
             {
-                if (m.IsCastleKingside || m.IsCastleQueenside) return 5; // above quiet, below captures
+                if (m.IsCastleKingside || m.IsCastleQueenside) return 5; 
                 if (m.Captured == 0) return 0;
                 return PieceValue(m.Captured) * 10 - PieceValue(m.Piece);
             })
             .ToList();
     }
-
-    // =========================================================================
-    //  ExecuteBestMove — handles castling at the Unity layer.
-    // =========================================================================
 
     private void ExecuteBestMove(MoveCandidate move)
     {
@@ -762,12 +655,9 @@ public class ChessBot : MonoBehaviour
             MovePlateSpawn(move.piece, move.toX, move.toY, move.fromX, move.fromY);
 
         if (!moveFound)
-            Debug.LogWarning("Bot: best move could not be executed (legality mismatch?).");
+            Debug.LogWarning("Bot: best move could not be executed.");
     }
 
-    // Execute a castling move at the Unity level.
-    // Moves the king two squares, then teleports the rook to the correct square.
-    // Adjust the MoveThePlate / Chessman API calls to match your actual implementation.
     private void ExecuteCastle(MoveCandidate move)
     {
         bool white = move.piece.name.StartsWith("white");
@@ -777,10 +667,8 @@ public class ChessBot : MonoBehaviour
         int rookFromX = kingside ? 7 : 0;
         int rookToX = kingside ? 5 : 3;
 
-        // Move the king via your existing move system.
         MovePlateSpawn(move.piece, move.toX, move.toY, move.fromX, move.fromY);
 
-        // Teleport the rook directly (bypassing normal move-plate logic).
         GameObject rook = game.GetPosition(rookFromX, row);
         if (rook != null)
         {
@@ -791,7 +679,6 @@ public class ChessBot : MonoBehaviour
                 game.SetPosition(rook, rookToX, row);
                 rookCm.SetXBoard(rookToX);
                 rookCm.SetYBoard(row);
-                // Sync the visual position if your Chessman has a method for it.
                 rookCm.SetCoords();
             }
         }
@@ -799,11 +686,8 @@ public class ChessBot : MonoBehaviour
         moveFound = true;
     }
 
-    // =========================================================================
-    //  GenerateAllMoves — Unity-side root move generation (main thread only).
-    //  Extended to detect and emit castling MoveCandidate entries.
-    // =========================================================================
-
+    //GenerateAllMoves —  root move generation (main thread only)
+    //Touch it and you die! 
     private List<MoveCandidate> GenerateAllMoves(List<GameObject> pieces)
     {
         var moves = new List<MoveCandidate>();
@@ -840,21 +724,19 @@ public class ChessBot : MonoBehaviour
                 });
             }
 
-            // Add castling candidates separately for king pieces.
             if (Math.Abs(EncodeGameObject(piece)) == 6)
                 AddCastlingCandidates(piece, fromX, fromY, moves);
         }
         return moves;
     }
 
-    // Checks castling rights on the Unity board and emits MoveCandidate entries.
     private void AddCastlingCandidates(GameObject king, int fromX, int fromY,
                                        List<MoveCandidate> moves)
     {
         bool white = king.name.StartsWith("white");
         int row = white ? 0 : 7;
 
-        if (fromX != 4 || fromY != row) return;  // king not on starting square
+        if (fromX != 4 || fromY != row) return;  
 
         // Kingside
         if (game.GetPosition(5, row) == null &&
@@ -925,7 +807,7 @@ public class ChessBot : MonoBehaviour
             mp.IX = i; mp.IY = j;
             mp.SetReference(game.GetPosition(i, j));
             mp.SetCoords(matrixX, matrixY);
-            mp.MakeMove();
+            StartCoroutine(mp.MakeMoveAnimated(isPlayer: false));
             moveFound = true;
         }
     }
@@ -945,7 +827,7 @@ public class ChessBot : MonoBehaviour
             mp.IX = i; mp.IY = j;
             mp.SetReference(game.GetPosition(i, j));
             mp.SetCoords(matrixX, matrixY);
-            mp.MakeMove();
+            StartCoroutine(mp.MakeMoveAnimated(false));
             moveFound = true;
         }
     }

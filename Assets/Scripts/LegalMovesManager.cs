@@ -108,9 +108,16 @@ public class LegalMovesManager : MonoBehaviour
                 }
             }
         }
+        if (playerPieces.Count == 0)
+            return false;
         return true;
     }
-
+    public bool NoPieces()
+    {
+        legalMovesManage = GetComponent<Game>();
+        List<GameObject> playerPieces = legalMovesManage.GetPlayerPieces();
+        return playerPieces.Count == 0;
+    }
     public bool IsKingInCheck()
     {
         legalMovesManage = GetComponent<Game>();

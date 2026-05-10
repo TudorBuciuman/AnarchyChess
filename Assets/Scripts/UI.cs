@@ -9,7 +9,7 @@ public class UI : MonoBehaviour
     public GameObject logo,windowsLogo,windowsLego,windowsBack;
     public GameObject AndroidLogo,AndroidCoolBackground;
     public static bool pressed=false;
-    public static bool win = false;
+    public static bool win = true;
     public static bool DarkMode=false;
 
     public Text lv;
@@ -37,7 +37,9 @@ public class UI : MonoBehaviour
             AndroidCoolBackground.SetActive(true);
         }
 
-        //if (DarkMode)
+        
+        
+        if (DarkMode)
         {
             //Protocol();
             audioSource.clip = clip2;

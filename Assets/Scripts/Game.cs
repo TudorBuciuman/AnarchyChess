@@ -8,6 +8,7 @@ public class Game : MonoBehaviour
 {
     [SerializeField]
     public PieceSetDefinition[] pieceSets = new PieceSetDefinition[3];
+    public GameObject OtherUI, OtherUIb;
     public int PieceSet = -1;
 
     public GameObject chesspiece;
@@ -45,10 +46,13 @@ public class Game : MonoBehaviour
 
     public Text YouWonText;
     public Image dark;
+    public Texture2D horsecursor;
 
     public Sprite[] tableSprites = new Sprite[10];
     public Color c;
-    public static Colors matchTheme=Colors.wood1;
+    public static Colors matchTheme = Colors.wood1;
+    public static Minigame currentMinigame;
+    public static bool ShowMovesTracker = true;
 
 
     string fen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
@@ -68,40 +72,82 @@ public class Game : MonoBehaviour
     public void StartTheGame()
     {
         white = UnityEngine.Random.Range(0, 2) == 1;
+        if (!white)
+        {
+            Destroy(OtherUI);
+            OtherUIb.SetActive(true);
+        }
+        else
+        {
+            Destroy(OtherUIb);
+        }
         PieceSetManager();
         Theme();
-
+        if (UnityEngine.Random.Range(1, 10)==2)
+        Cursor.SetCursor(horsecursor,Vector2.zero,CursorMode.Auto);
         ChoseMinigame();
         
-        for (int i = 0; i < 16; i++)
+        for (int i = 0; i < playerBlack.Length; i++)
         {
             if(playerBlack[i])
             SetPosition(playerBlack[i]);
         }
-        for (int i = 0; i < 16; i++)
+        for (int i = 0; i < playerWhite.Length; i++)
         {
             if (playerWhite[i])
             SetPosition(playerWhite[i]);
+        }
+        if (currentMinigame == Minigame.FogOfWar)
+        {
+            FogOfWarManager fog = GameObject.FindGameObjectWithTag("GameController").GetComponent<FogOfWarManager>();
+            if (fog != null)
+                fog.RefreshFog();
+        }
+        if (currentMinigame == Minigame.Duck)
+        {
+            DuckChessManager duck = GetComponent<DuckChessManager>();
+            if (duck != null)
+                duck.SpawnDuck();
         }
         if (!white)
         {
             GameObject.FindGameObjectWithTag("GameController").GetComponent<ChessBot>().BotTurn();
         }
+        FindFirstObjectByType<MinigameAnnouncer>().ShowMinigame(GetMinigameName(currentMinigame));
+        FindFirstObjectByType<MoveTrackerUI>().Resetter(ShowMovesTracker);
     }
     public void ChoseMinigame()
     {
         int random = UnityEngine.Random.Range(0, 10);
-        if (random > 7)
+        if (random ==3 || random==4)
         {
+            currentMinigame = Minigame.NineHundredSixty;
             Chess960();
         }
         else if (random == 7)
         {
             fen = "rnbqkbnr/pppppppp/8/1PP2PP1/PPPPPPPP/PPPPPPPP/PPPPPPPP/PPPPPPPP w kq - 0 1";
+            currentMinigame = Minigame.Horde;
+            LoadThePositionFromFen(fen);
+        }
+        else if (random == 6)
+        {
+            currentMinigame = Minigame.FogOfWar;
+            LoadThePositionFromFen(fen);
+        }
+        else if(random == 8)
+        {
+            currentMinigame = Minigame.Atomic;
+            LoadThePositionFromFen(fen);
+        }
+        else if (random == 5)
+        {
+            currentMinigame = Minigame.Duck;
             LoadThePositionFromFen(fen);
         }
         else
         {
+            currentMinigame = Minigame.Classic;
             LoadThePositionFromFen(fen);
         }
     }
@@ -138,7 +184,39 @@ public class Game : MonoBehaviour
         darkfantasy,*/
 
     }
-
+    public enum Minigame
+    {
+        Classic,
+        NineHundredSixty,
+        Horde,
+        FogOfWar,
+        Anarchy,
+        Atomic,
+        AnarchyBot,
+        Duck,
+        DiceChess,
+    }
+    public static string GetMinigameName(Minigame game)
+    {
+        switch (game)
+        {
+            case Minigame.Horde:
+                return "Horde";
+            case Minigame.NineHundredSixty:
+                return "Chess 960";
+            case Minigame.Classic:
+                return "Classic";
+            case Minigame.Atomic:
+                return "Atomic";
+            case Minigame.Anarchy:
+                return "Anarchy";
+            case Minigame.DiceChess:
+                return "Dice chess";
+            case Minigame.Duck:
+                return "Duck chess";
+        }
+        return game.ToString();
+    }
     public static Color ToColor(Colors c)
     {
         switch (c)
@@ -306,19 +384,84 @@ public class Game : MonoBehaviour
     {
         switch (c)
         {
+            case Colors.normal:
+                return new Color32(0xAB, 0x87, 0x51, 255);
+
+            case Colors.dark:
+                return new Color32(0x9D, 0x9D, 0x9D, 255);
+
+            case Colors.white:
+                return Color.white;
+
+            case Colors.bright:
+                return new Color32(0xAB, 0x87, 0x51, 255);
+
+            case Colors.darkbrown:
+                return new Color32(0xAB, 0x87, 0x51, 255);
+
+            case Colors.brightwood:
+                return new Color32(0x9D, 0x9D, 0x9D, 255);
+
+            case Colors.gray:
+                return new Color32(0x9D, 0x9D, 0x9D, 255);
+
+            case Colors.blue:
+                return new Color32(0x9D, 0x9D, 0x9D, 255);
+
+            case Colors.JIK:
+                return new Color32(0x9D, 0x9D, 0x9D, 255);
+
+            case Colors.valentines:
+                return new Color32(0xFD, 0xFD, 0xFD, 255);
+
+            case Colors.olive:
+                return new Color32(0xFD, 0xFD, 0xFD, 255);
+
             case Colors.metal:
                 return new Color32(0xDB, 0xDB, 0xDB, 255);
 
             default:
-                return Color.black;
+                return new Color32(0x9D, 0x9D, 0x9D, 255);
         }
     }
     public static Color ToColorDark(Colors c)
     {
         switch (c)
         {
+            case Colors.normal:
+                return new Color32(0x66, 0x43, 0x24, 255);
+
+            case Colors.dark:
+                return Color.black;
+
+            case Colors.white:
+                return Color.black;
+
+            case Colors.bright:
+                return Color.black;
+
+            case Colors.darkbrown:
+                return new Color32(0x25, 0x16, 0x05, 255);
+
+            case Colors.brightwood:
+                return Color.black;
+
+            case Colors.gray:
+                return Color.black;
+
+            case Colors.blue:
+                return Color.black;
+
+            case Colors.JIK:
+                return Color.black;
+
+            case Colors.valentines:
+                return Color.black;
+
+            case Colors.olive:
+                return Color.black;
             case Colors.metal:
-                return new Color32(0x00, 0x00, 0x00, 255);
+                return Color.black;
 
             default:
                 return Color.black;
@@ -362,7 +505,6 @@ public class Game : MonoBehaviour
         Colors randomColor = GetTheColor();
         //PieceSetManager();
         matchTheme = randomColor;
-        //Debug.Log(randomColor);
         GameObject.FindFirstObjectByType<Camera>().backgroundColor = ToColor(randomColor);
         switch (randomColor)
         {
@@ -370,60 +512,110 @@ public class Game : MonoBehaviour
                 {
                     table.GetComponent<SpriteRenderer>().sprite = tableSprites[1];
                     table.GetComponent<SpriteRenderer>().color = Color.white;
+                    GameObject.Find("Board_edge").GetComponent<SpriteRenderer>().color = ToColorBoardEdge(randomColor);
+                    GameObject.Find("aceg").GetComponent<Text>().color = ToColorBright(randomColor);
+                    GameObject.Find("1357").GetComponent<Text>().color = ToColorBright(randomColor);
+                    GameObject.Find("bdfh").GetComponent<Text>().color = ToColorDark(randomColor);
+                    GameObject.Find("2468").GetComponent<Text>().color = ToColorDark(randomColor);
                     break;
                 }
             case Colors.JIK:
                 {
                     table.GetComponent<SpriteRenderer>().sprite = tableSprites[2];
                     table.GetComponent<SpriteRenderer>().color = Color.white;
+                    GameObject.Find("Board_edge").GetComponent<SpriteRenderer>().color = ToColorBoardEdge(randomColor);
+                    GameObject.Find("aceg").GetComponent<Text>().color = ToColorBright(randomColor);
+                    GameObject.Find("1357").GetComponent<Text>().color = ToColorBright(randomColor);
+                    GameObject.Find("bdfh").GetComponent<Text>().color = ToColorDark(randomColor);
+                    GameObject.Find("2468").GetComponent<Text>().color = ToColorDark(randomColor);
                     break;
                 }
             case Colors.brightwood:
                 {
                     table.GetComponent<SpriteRenderer>().sprite = tableSprites[0];
                     table.GetComponent<SpriteRenderer>().color = Color.white;
+                    GameObject.Find("Board_edge").GetComponent<SpriteRenderer>().color = ToColorBoardEdge(randomColor);
+                    GameObject.Find("aceg").GetComponent<Text>().color = ToColorBright(randomColor);
+                    GameObject.Find("1357").GetComponent<Text>().color = ToColorBright(randomColor);
+                    GameObject.Find("bdfh").GetComponent<Text>().color = ToColorDark(randomColor);
+                    GameObject.Find("2468").GetComponent<Text>().color = ToColorDark(randomColor);
                     break;
                 }
             case Colors.darkbrown:
                 {
                     table.GetComponent<SpriteRenderer>().sprite = tableSprites[3];
                     table.GetComponent<SpriteRenderer>().color = Color.white;
+                    GameObject.Find("Board_edge").GetComponent<SpriteRenderer>().color = ToColorBoardEdge(randomColor);
+                    GameObject.Find("aceg").GetComponent<Text>().color = ToColorBright(randomColor);
+                    GameObject.Find("1357").GetComponent<Text>().color = ToColorBright(randomColor);
+                    GameObject.Find("bdfh").GetComponent<Text>().color = ToColorDark(randomColor);
+                    GameObject.Find("2468").GetComponent<Text>().color = ToColorDark(randomColor);
                     break;
                 }
             case Colors.bright:
                 {
                     table.GetComponent<SpriteRenderer>().sprite = tableSprites[0];
                     table.GetComponent<SpriteRenderer>().color = Color.white;
+                    GameObject.Find("Board_edge").GetComponent<SpriteRenderer>().color = ToColorBoardEdge(randomColor);
+                    GameObject.Find("aceg").GetComponent<Text>().color = ToColorBright(randomColor);
+                    GameObject.Find("1357").GetComponent<Text>().color = ToColorBright(randomColor);
+                    GameObject.Find("bdfh").GetComponent<Text>().color = ToColorDark(randomColor);
+                    GameObject.Find("2468").GetComponent<Text>().color = ToColorDark(randomColor);
                     break;
                 }
             case Colors.white:
                 {
                     table.GetComponent<SpriteRenderer>().sprite = tableSprites[UnityEngine.Random.Range(0,3)];
                     table.GetComponent<SpriteRenderer>().color = Color.white;
+                    GameObject.Find("Board_edge").GetComponent<SpriteRenderer>().color = ToColorBoardEdge(randomColor);
+                    GameObject.Find("aceg").GetComponent<Text>().color = ToColorBright(randomColor);
+                    GameObject.Find("1357").GetComponent<Text>().color = ToColorBright(randomColor);
+                    GameObject.Find("bdfh").GetComponent<Text>().color = ToColorDark(randomColor);
+                    GameObject.Find("2468").GetComponent<Text>().color = ToColorDark(randomColor);
                     break;
                 }
             case Colors.blue:
                 {
                     table.GetComponent<SpriteRenderer>().sprite = tableSprites[2];
                     table.GetComponent<SpriteRenderer>().color = Color.white;
+                    GameObject.Find("Board_edge").GetComponent<SpriteRenderer>().color = ToColorBoardEdge(randomColor);
+                    GameObject.Find("aceg").GetComponent<Text>().color = ToColorBright(randomColor);
+                    GameObject.Find("1357").GetComponent<Text>().color = ToColorBright(randomColor);
+                    GameObject.Find("bdfh").GetComponent<Text>().color = ToColorDark(randomColor);
+                    GameObject.Find("2468").GetComponent<Text>().color = ToColorDark(randomColor);
                     break;
                 }
             case Colors.gray:
                 {
                     table.GetComponent<SpriteRenderer>().sprite = tableSprites[0];
                     table.GetComponent<SpriteRenderer>().color = Color.gray;
+                    GameObject.Find("Board_edge").GetComponent<SpriteRenderer>().color = ToColorBoardEdge(randomColor);
+                    GameObject.Find("aceg").GetComponent<Text>().color = ToColorBright(randomColor);
+                    GameObject.Find("1357").GetComponent<Text>().color = ToColorBright(randomColor);
+                    GameObject.Find("bdfh").GetComponent<Text>().color = ToColorDark(randomColor);
+                    GameObject.Find("2468").GetComponent<Text>().color = ToColorDark(randomColor);
                     break;
                 }
             case Colors.dark:
                 {
-                    table.GetComponent<SpriteRenderer>().sprite = tableSprites[0];
+                    table.GetComponent<SpriteRenderer>().sprite = tableSprites[8];
                     table.GetComponent<SpriteRenderer>().color = Color.gray;
+                    GameObject.Find("Board_edge").GetComponent<SpriteRenderer>().color = ToColorBoardEdge(randomColor);
+                    GameObject.Find("aceg").GetComponent<Text>().color = ToColorBright(randomColor);
+                    GameObject.Find("1357").GetComponent<Text>().color = ToColorBright(randomColor);
+                    GameObject.Find("bdfh").GetComponent<Text>().color = ToColorDark(randomColor);
+                    GameObject.Find("2468").GetComponent<Text>().color = ToColorDark(randomColor);
                     break;
                 }
             case Colors.valentines:
                 {
                     table.GetComponent<SpriteRenderer>().sprite = tableSprites[4];
                     table.GetComponent<SpriteRenderer>().color = Color.white;
+                    GameObject.Find("Board_edge").GetComponent<SpriteRenderer>().color = ToColorBoardEdge(randomColor);
+                    GameObject.Find("aceg").GetComponent<Text>().color = ToColorBright(randomColor);
+                    GameObject.Find("1357").GetComponent<Text>().color = ToColorBright(randomColor);
+                    GameObject.Find("bdfh").GetComponent<Text>().color = ToColorDark(randomColor);
+                    GameObject.Find("2468").GetComponent<Text>().color = ToColorDark(randomColor);
                     break;
                 }
 
@@ -431,11 +623,11 @@ public class Game : MonoBehaviour
                 {
                     table.GetComponent<SpriteRenderer>().sprite = tableSprites[5];
                     table.GetComponent<SpriteRenderer>().color = Color.white;
-                    GameObject.Find("Board_edge").GetComponent<SpriteRenderer>().color = ToColorBoardEdge(Colors.metal);
-                    GameObject.Find("aceg").GetComponent<Text>().color = ToColorBright(Colors.metal);
-                    GameObject.Find("1357").GetComponent<Text>().color = ToColorBright(Colors.metal);
-                    GameObject.Find("bdfh").GetComponent<Text>().color = ToColorBright(Colors.metal);
-                    GameObject.Find("2468").GetComponent<Text>().color = ToColorBright(Colors.metal);
+                    GameObject.Find("Board_edge").GetComponent<SpriteRenderer>().color = ToColorBoardEdge(randomColor);
+                    GameObject.Find("aceg").GetComponent<Text>().color = ToColorBright(randomColor);
+                    GameObject.Find("1357").GetComponent<Text>().color = ToColorBright(randomColor);
+                    GameObject.Find("bdfh").GetComponent<Text>().color = ToColorDark(randomColor);
+                    GameObject.Find("2468").GetComponent<Text>().color = ToColorDark(randomColor);
                     break;
                 }
 
@@ -443,6 +635,11 @@ public class Game : MonoBehaviour
                 {
                     table.GetComponent<SpriteRenderer>().sprite = tableSprites[6];
                     table.GetComponent<SpriteRenderer>().color = Color.white;
+                    GameObject.Find("Board_edge").GetComponent<SpriteRenderer>().color = ToColorBoardEdge(randomColor);
+                    GameObject.Find("aceg").GetComponent<Text>().color = ToColorBright(randomColor);
+                    GameObject.Find("1357").GetComponent<Text>().color = ToColorBright(randomColor);
+                    GameObject.Find("bdfh").GetComponent<Text>().color = ToColorDark(randomColor);
+                    GameObject.Find("2468").GetComponent<Text>().color = ToColorDark(randomColor);
                     break;
                 }
 
@@ -450,12 +647,22 @@ public class Game : MonoBehaviour
                 {
                     table.GetComponent<SpriteRenderer>().sprite = tableSprites[7];
                     table.GetComponent<SpriteRenderer>().color = Color.white;
+                    GameObject.Find("Board_edge").GetComponent<SpriteRenderer>().color = ToColorBoardEdge(randomColor);
+                    GameObject.Find("aceg").GetComponent<Text>().color = ToColorBright(randomColor);
+                    GameObject.Find("1357").GetComponent<Text>().color = ToColorBright(randomColor);
+                    GameObject.Find("bdfh").GetComponent<Text>().color = ToColorDark(randomColor);
+                    GameObject.Find("2468").GetComponent<Text>().color = ToColorDark(randomColor);
                     break;
                 }
 
             default:
                 table.GetComponent<SpriteRenderer>().color = c;
                 table.GetComponent<SpriteRenderer>().sprite = tableSprites[0];
+                GameObject.Find("Board_edge").GetComponent<SpriteRenderer>().color = ToColorBoardEdge(randomColor);
+                GameObject.Find("aceg").GetComponent<Text>().color = ToColorBright(randomColor);
+                GameObject.Find("1357").GetComponent<Text>().color = ToColorBright(randomColor);
+                GameObject.Find("bdfh").GetComponent<Text>().color = ToColorDark(randomColor);
+                GameObject.Find("2468").GetComponent<Text>().color = ToColorDark(randomColor);
                 break;
         }
         GameObject[] lastMovePlat = GameObject.FindGameObjectsWithTag("lastMovePlate");
@@ -718,11 +925,12 @@ public class Game : MonoBehaviour
         }
     }
 
-    public void RecordTheMove(GameObject piece, int fromX, int fromY, int toX, int toY)
+    public void RecordTheMove(GameObject piece, int fromX, int fromY, int toX, int toY, bool attack, bool castling)
     {
         Move move = new Move(piece, fromX, fromY, toX, toY);
         Chessman chessman = piece.GetComponent<Chessman>();
         MoveHistory.Add(move);
+        string castleSize = null;
         if ((move.piece.name == "white_rook" && fromX == 0 && fromY == 0) || (toX == 0 && toY == 0))
         {
             chessman.wqCastling = false;
@@ -747,6 +955,26 @@ public class Game : MonoBehaviour
         {
             WCastling = false;
         }
+        if (castling)
+        {
+            if (toX == 6)
+            {
+                castleSize="queenside";
+            }
+            else
+            {
+                castleSize = "kingside";
+            }
+        }
+        if(ShowMovesTracker)
+        FindFirstObjectByType<MoveTrackerUI>()?.RecordMove(
+        piece, fromX, fromY, toX, toY,
+        isCapture: attack,
+        isCheck: false,
+        isCheckmate: false,
+        castleSide: null,
+        promotionPiece: null
+        );
     }
 
     public Move GetTheLastMove()
@@ -1084,7 +1312,7 @@ public class Game : MonoBehaviour
     {
         if (!IsGameOver())
         {
-            char[] TheFen = new char[64];
+            char[] TheFen = new char[128];
             int u = 0, emptySquareCount = 0;
 
             for (int j = 7; j >= 0; j--)
@@ -1167,7 +1395,7 @@ public class Game : MonoBehaviour
     }
     public string GetMatchFen()
     {
-        char[] TheFen = new char[64];
+        char[] TheFen = new char[128];
         int u = 0, emptySquareCount = 0;
 
         for (int j = 7; j >= 0; j--)

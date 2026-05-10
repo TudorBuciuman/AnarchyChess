@@ -52,6 +52,8 @@ public class Chessman : MonoBehaviour
             case "white_rook": player = "white"; break;
             case "white_pawn": player = "white"; break;
             case "white_bishop": player = "white"; break;
+
+            case "duck": player = "white"; break;
         }
     }
     public void SetCoords()
@@ -96,6 +98,12 @@ public class Chessman : MonoBehaviour
         
         if (!lg.GetGameOver())
         {
+            if (MoveThePlate.IsAnimating) 
+                return;
+            DuckChessManager duckMgr = controller.GetComponent<DuckChessManager>();
+            if (duckMgr != null && duckMgr.IsPlacingDuck()) 
+                return;
+
             if (this.gameObject.name == "tabla_sah")
                 DestroyMovePlates();
             else if (!controller.GetComponent<Game>().IsGameOver() && white ==(player=="white") && controller.GetComponent<Game>().GetCurrentPlayer() == player)
@@ -111,6 +119,14 @@ public class Chessman : MonoBehaviour
         for (int i = 0; i < movePlates.Length; i++)
         {
             Destroy(movePlates[i]);
+        }
+    }
+    public void MakeMovePlatesInvisible()
+    {
+        GameObject[] movePlates = GameObject.FindGameObjectsWithTag("MovePlate");
+        for (int i = 0; i < movePlates.Length; i++)
+        {
+            movePlates[i].GetComponent<SpriteRenderer>().enabled = false;
         }
     }
 
@@ -227,7 +243,7 @@ public class Chessman : MonoBehaviour
     {
         Piece = gameObject;
         Game gm = controller.GetComponent<Game>();
-        if (y == 1 && gm.PositionOnBoard(x, y + 1) && gm.PositionOnBoard(x, y + 2) && gm.GetPosition(x, y + 1) == null && gm.GetPosition(x, y + 2) == null)
+        if (y <= 1 && gm.PositionOnBoard(x, y + 1) && gm.PositionOnBoard(x, y + 2) && gm.GetPosition(x, y + 1) == null && gm.GetPosition(x, y + 2) == null)
         {
             MovePlateSpawn(x, y + 2, x, y);
         }
@@ -261,7 +277,7 @@ public class Chessman : MonoBehaviour
     {
         Piece = gameObject;
         Game gm = controller.GetComponent<Game>();
-        if (y == 6 && gm.PositionOnBoard(x, y - 1) && gm.PositionOnBoard(x, y - 2) && gm.GetPosition(x, y - 1) == null && gm.GetPosition(x, y - 2) == null)
+        if (y >= 6 && gm.PositionOnBoard(x, y - 1) && gm.PositionOnBoard(x, y - 2) && gm.GetPosition(x, y - 1) == null && gm.GetPosition(x, y - 2) == null)
         {
             MovePlateSpawn(x, y - 2, x, y);
         }
@@ -298,22 +314,29 @@ public class Chessman : MonoBehaviour
         Game.Move a = game.GetTheLastMove();
         if (a != null)
         {
+            if (Game.currentMinigame == Game.Minigame.Atomic && game.GetPosition(tox,toy)==null)
+            {
+                return false;
+            }
             if (a.piece.name != "black_pawn" && a.piece.name != "white_pawn")
             {
                 return false;
 
             }
-            else if (toy == 5 && a.piece.name != "black_pawn")
+            else if (toy == 4 && a.piece.name != "black_pawn")
             {
                 return false;
             }
-            else if (toy == 2 && a.piece.name != "white_pawn")
+            else if (toy == 3 && a.piece.name != "white_pawn")
             {
                 return false;
             }
             else if ((a.toX == tox) && (a.toY == toy))
             {
+                if((toy==4 && a.fromY==6 && tox==a.fromX) || (toy==3 && a.fromY==1 && tox==a.fromX))
                 return true;
+
+                return false;
             }
             else
             {
